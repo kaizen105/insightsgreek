@@ -11,6 +11,15 @@ from collections import Counter
 import re
 import sys 
 import io 
+
+# --- IMPORT DATABASE MODELS ---
+try:
+    from models import db, User, Feedback, Product, ActivityLog
+    print("✅ SUCCESS: Found models.py")
+except ImportError as e:
+    print(f"❌ FATAL: Could not import models.py: {e}")
+    raise e
+
 # --- ROBUST GEMINI (CHATBOT) SETUP ---
 import google.generativeai as genai
 GENAI_KEY = os.environ.get('GOOGLE_API_KEY')
