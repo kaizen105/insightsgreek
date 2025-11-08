@@ -74,7 +74,8 @@ except ImportError as e:
     ml_model, predict_probability = None, None
 # ---------------------
 
-app = Flask(__name__, ...)
+app = Flask(__name__, template_folder=os.path.join(CURRENT_DIR, 'templates'), 
+            static_folder=os.path.join(CURRENT_DIR, 'static'))
 
 # UPDATED CONFIGURATION FOR PRODUCTION
 # Use the environment variable if it exists, otherwise fallback to dev key
