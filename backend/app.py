@@ -52,7 +52,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 # 3. Get the path to the 'code' folder
 CODE_DIR = os.path.join(PROJECT_ROOT, 'code')
-
+CURRENT_DIR = BASE_DIR  # ADD THIS LINE
 # 4. FORCE Python to look in these folders (APPEND to avoid conflicts with stdlib 'code')
 if PROJECT_ROOT not in sys.path: sys.path.append(PROJECT_ROOT)
 if CODE_DIR not in sys.path: sys.path.append(CODE_DIR)
