@@ -99,6 +99,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.j
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 CORS(app)
+# This ensures tables are created even when launched by Gunicorn
+with app.app_context():
+    db.create_all()
+    print("✅ SUCCESS: Database tables verified/created.")
+# ============
 
 # --- LOAD ML MODEL AT STARTUP ---
 ml_model = None
