@@ -100,21 +100,37 @@ function generateTrendChart(trends) {
     });
 }
 
-// 3. Word Cloud
+// 3. Word Cloud (High-DPI / Retina Sharpness Fix)
 function generateWordCloud(wordData) {
     const canvas = document.getElementById('wordcloud');
-    // WordCloud library expects [ ["word", size], ... ]
+    const container = canvas.parentElement;
+    
+    // 1. Get the device pixel ratio (e.g., 2 for retina screens)
+    const dpr = window.devicePixelRatio || 1;
+    
+    // 2. Get the display size we want
+    const width = container.offsetWidth;
+    const height = 400; // Matches your CSS height
+
+    // 3. Set the actual internal resolution higher based on DPR
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+
+    // 4. Force CSS to keep it the original display size
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    // 5. Draw, scaling up the font size by DPR so it doesn't look tiny
     WordCloud(canvas, {
         list: wordData,
-        gridSize: 8,
-        weightFactor: 5,
+        gridSize: Math.round(8 * dpr),
+        weightFactor: (size) => Math.pow(size, 2.3) * (canvas.width / 1000) * dpr * 0.8, // Tuned scaling
         fontFamily: 'Segoe UI, sans-serif',
         color: 'random-dark',
         rotateRatio: 0,
         backgroundColor: 'transparent'
     });
 }
-
 // Display recent list
 function displayRecentFeedbacks(feedbacks) {
     const list = document.getElementById('feedbackList');

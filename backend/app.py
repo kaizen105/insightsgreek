@@ -446,20 +446,27 @@ def get_dashboard(current_user):
 @token_required
 @role_required('manager')
 def download_report(current_user):
-    feedbacks = Feedback.query.order_by(Feedback.timestamp.desc()).all()
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['ID', 'Salesperson', 'Feedback', 'Timestamp', 'Status', 'Lead Score', 'Lead Label'])
-    for f in feedbacks:
-        writer.writerow([
-            f.id, f.salesperson.username, f.text, f.timestamp.strftime('%Y-%m-%d %H:%M:%S'), f.status,
-            f"{f.lead_score:.2f}" if f.lead_score is not None else "N/A",
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(['ID', 'Salesperson', 'Feedback', 'Time', 'Status', 'Lead Score', 'Lead Label'])
+    for f in Feedback.query.order_by(Feedback.timestamp.desc()).all():
+        w.writerow([
+            f.id, 
+            f.salesperson.username, 
+            f.text, 
+            f.timestamp.strftime('%Y-%m-%d %H:%M:%S'), 
+            f.status, 
+            f"{f.lead_score:.2f}" if f.lead_score is not None else "N/A", 
             f.lead_label or "N/A"
         ])
-    output.seek(0)
-    return send_file(io.BytesIO(output.getvalue().encode('utf-8')), mimetype='text/csv', as_attachment=True, download_name=f'report_{datetime.utcnow().strftime("%Y%m%d")}.csv')
-
-
+    out.seek(0)
+    # CRITICAL FIX: 'utf-8-sig' adds the BOM for Excel compatibility
+    return send_file(
+        io.BytesIO(out.getvalue().encode('utf-8-sig')), 
+        mimetype='text/csv', 
+        as_attachment=True, 
+        download_name=f'sales_report_{datetime.utcnow().strftime("%Y-%m-%d")}.csv'
+    )
 # ========== API ROUTES - Dev Management ==========
 
 @app.route('/api/users', methods=['GET'])
