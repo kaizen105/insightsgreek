@@ -131,12 +131,20 @@ with app.app_context():
         sales_user = User.query.filter_by(role='salesperson').first()
         if sales_user:
             samples = [
-                ("Customer loved the demo, wants to sign next week.", 0.95, "High"),
-                ("Too expensive, not interested right now.", 0.15, "Low"),
-                ("They liked feature A but need to check with IT department.", 0.55, "Medium"),
-                ("Urgent: Ready to buy enterprise plan, needs contract.", 0.99, "High"),
-                ("Just browsing, no immediate need.", 0.25, "Low"),
-                ("Very impressed with AI features. Wants a follow-up.", 0.88, "High")
+                ("Customer absolutely loved the demo. They have budget approved and want to start next week.", 0.95, "High"),
+                ("Not interested at all. Said our pricing is ridiculous compared to competitors.", 0.10, "Low"),
+                ("Meeting went okay. They liked Feature A but hated Feature B. Need to nurture.", 0.55, "Medium"),
+                ("Very keen! Asked for a custom quote for 500 seats. Hot lead!", 0.98, "High"),
+                ("They are stuck in an existing contract for another 6 months. Call back later.", 0.30, "Low"),
+                ("Great conversation. Decision maker needs approval from CEO, but looks promising.", 0.75, "High"),
+                ("Just looking around, no immediate need. Maybe next year.", 0.20, "Low"),
+                ("Had technical issues during the demo, they got frustrated and left early.", 0.15, "Low"),
+                ("Wow, they were impressed by the AI features. Wants a follow-up meeting with their CTO.", 0.92, "High"),
+                ("Standard inquiry, sent standard pricing sheet. Waiting to hear back.", 0.50, "Medium"),
+                # Add duplicates to bulk up data
+                ("Customer absolutely loved the demo. They have budget approved and want to start next week.", 0.95, "High"),
+                ("Very keen! Asked for a custom quote for 500 seats. Hot lead!", 0.98, "High"),
+                ("Just looking around, no immediate need. Maybe next year.", 0.20, "Low"),
             ]
             # Create multiple entries spread over last 10 days for nice charts
             for _ in range(4): 
