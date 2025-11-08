@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer - Admin Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="navbar">
+        <h2>Developer Admin Panel</h2>
+        <div class="user-info">
+            <span id="username"></span>
+            <button onclick="logout()" class="btn-secondary">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="showTab('products')">Products</button>
+            <button class="tab-btn" onclick="showTab('users')">Users</button>
+            <button class="tab-btn" onclick="showTab('logs')">Activity Logs</button>
+        </div>
+
+        <!-- Products Tab -->
+        <div id="productsTab" class="tab-content active">
+            <h3>Product Management</h3>
+            <button onclick="showAddProduct()" class="btn-primary">Add Product</button>
+            
+            <div id="addProductForm" class="form-section" style="display:none;">
+                <h4>Add New Product</h4>
+                <input type="text" id="productName" placeholder="Product Name">
+                <textarea id="productDesc" rows="3" placeholder="Description"></textarea>
+                <textarea id="productDetails" rows="3" placeholder="Details"></textarea>
+                <button onclick="addProduct()" class="btn-primary">Save</button>
+                <button onclick="cancelAddProduct()" class="btn-secondary">Cancel</button>
+            </div>
+
+            <div id="productsList" class="data-list">
+                <!-- Products will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="usersTab" class="tab-content">
+            <h3>User Management</h3>
+            <button onclick="showAddUser()" class="btn-primary">Add User</button>
+            
+            <div id="addUserForm" class="form-section" style="display:none;">
+                <h4>Add New User</h4>
+                <input type="text" id="newUsername" placeholder="Username">
+                <input type="password" id="newPassword" placeholder="Password">
+                <select id="newRole">
+                    <option value="salesperson">Salesperson</option>
+                    <option value="manager">Manager</option>
+                    <option value="dev">Developer</option>
+                </select>
+                <button onclick="addUser()" class="btn-primary">Save</button>
+                <button onclick="cancelAddUser()" class="btn-secondary">Cancel</button>
+            </div>
+
+            <div id="usersList" class="data-list">
+                <!-- Users will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Activity Logs Tab -->
+        <div id="logsTab" class="tab-content">
+            <h3>Activity Logs</h3>
+            <div class="filter-section">
+                <select id="logFilter" onchange="filterLogs()">
+                    <option value="all">All Activities</option>
+                    <option value="login">Logins</option>
+                    <option value="feedback">Feedbacks</option>
+                    <option value="product">Product Changes</option>
+                    <option value="user">User Changes</option>
+                </select>
+            </div>
+            <div id="logsList" class="logs-list">
+                <!-- Activity logs will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dev.js') }}"></script>
+</body>
+</html>

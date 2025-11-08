@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesperson Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="navbar">
+        <h2>Salesperson Dashboard</h2>
+        <div class="user-info">
+            <span id="username"></span>
+            <button onclick="logout()" class="btn-secondary">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- TAB NAVIGATION -->
+        <div class="admin-tabs" style="margin-bottom: 20px;">
+            <button class="tab-btn active" onclick="showTab('feedback')">Customer Feedback</button>
+            <button class="tab-btn" onclick="showTab('leads')">Submit Sales Lead</button>
+        </div>
+
+        <!-- ================= TAB 1: CUSTOMER FEEDBACK ================= -->
+        <div id="feedbackTab" class="tab-content active">
+            <div class="feedback-section">
+                <h3>Customer Feedback Submission</h3>
+                
+                <div class="form-group">
+                    <label for="feedbackText">Feedback Details:</label>
+                    <textarea id="feedbackText" rows="6" placeholder="Enter general customer feedback, complaints, or suggestions..."></textarea>
+                </div>
+
+                <div class="grammar-section">
+                    <button onclick="checkGrammar('feedbackText')" class="btn-secondary" style="width: auto; padding: 8px 15px;">Check Grammar</button>
+                    <div id="correctedText" class="corrected-text" style="display: none; margin-top: 10px;"></div>
+                </div>
+
+                <!-- AI Insight for Feedback -->
+                <div id="aiResultFeedback" class="grammar-section" style="display: none; margin-top: 20px; border-left: 5px solid #667eea; background-color: #f5f7ff;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">AI Feedback Analysis</h4>
+                    <div style="font-size: 1.1em;">
+                         <p style="margin-bottom: 5px;"><strong>Sentiment/Quality:</strong> <span id="aiLabelFeedback" style="font-weight: bold;">-</span></p>
+                         <p><strong>Score:</strong> <span id="aiScoreFeedback">-</span>%</p>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button onclick="submitData('feedback')" class="btn-primary">Submit Feedback</button>
+                    <button onclick="resetForm('feedback')" class="btn-secondary">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: SALES LEAD ================= -->
+        <div id="leadsTab" class="tab-content">
+            <div class="feedback-section" style="border-top: 4px solid #059669;"> <!-- Green top border for leads -->
+                <h3 style="color: #059669;">Submit New Sales Lead</h3>
+                
+                <div class="form-group">
+                    <label for="leadText">Lead Details (Budget, Timeline, Decision Maker):</label>
+                    <textarea id="leadText" rows="6" placeholder="e.g., Spoke with CTO, they have $50k budget and want to close by Q3..."></textarea>
+                </div>
+
+                <div class="grammar-section">
+                     <button onclick="checkGrammar('leadText')" class="btn-secondary" style="width: auto; padding: 8px 15px;">Check Grammar</button>
+                     <div id="correctedTextLead" class="corrected-text" style="display: none; margin-top: 10px;"></div>
+                </div>
+
+                <!-- AI Insight for Leads (Green Themed) -->
+                <div id="aiResultLead" class="grammar-section" style="display: none; margin-top: 20px; border-left: 5px solid #059669; background-color: #f0fdf4;">
+                    <h4 style="color: #059669; margin-bottom: 10px;">AI Lead Scoring</h4>
+                    <div style="font-size: 1.1em;">
+                         <p style="margin-bottom: 5px;"><strong>Lead Qualification:</strong> <span id="aiLabelLead" style="font-weight: bold;">-</span></p>
+                         <p><strong>Win Probability:</strong> <span id="aiScoreLead">-</span>%</p>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button onclick="submitData('lead')" class="btn-primary" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">Submit Lead</button>
+                    <button onclick="resetForm('lead')" class="btn-secondary">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shared Status Message & Product List -->
+        <div id="statusMsg" class="status-msg" style="margin-top: 20px;"></div>
+
+        <div class="product-section" style="margin-top: 40px;">
+            <h4>Product Catalogue Reference</h4>
+            <div id="productList" class="product-list">
+                <!-- Products will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- === NEW: CHATBOT WIDGET === -->
+    <div id="chatWidget" class="chat-widget">
+        <div class="chat-header" onclick="toggleChat()">
+            <span>🤖 AI Sales Assistant</span>
+            <span id="chatToggle">▲</span>
+        </div>
+        <div id="chatBody" class="chat-body" style="display: none;">
+            <div id="chatMessages" class="chat-messages">
+                <div class="message bot">
+                    Hello! I can help you refine your pitch, analyze this lead, or suggest next steps based on what you're typing.
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Ask AI..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                <button onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+    <!-- =========================== -->
+
+    <script src="{{ url_for('static', filename='js/salesperson.js') }}"></script>
+</body>
+</html>
