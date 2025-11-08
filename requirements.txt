@@ -4,3 +4,4 @@ joblib
 nltk
 textblob
 Flask
+gunicorn
