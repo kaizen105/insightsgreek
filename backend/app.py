@@ -99,11 +99,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.j
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 CORS(app)
-# This ensures tables are created even when launched by Gunicorn
+
+# ========== CRITICAL: DB INIT & SAFE SEED ==========
 with app.app_context():
     db.create_all()
-    print("✅ SUCCESS: Database tables verified/created.")
-# ============
+    # Check if users exist. If not, SEED them safely.
+    if not User.query.first():
+        print("🌱 Database empty. Seeding default users...")
+        dev = User(username='dev', role='dev'); dev.set_password('dev123')
+        mgr = User(username='manager', role='manager'); mgr.set_password('manager123')
+        sls = User(username='sales', role='salesperson'); sls.set_password('sales123')
+        db.session.add_all([dev, mgr, sls])
+        db.session.commit()
+        print("✅ SUCCESS: Default users created (dev/manager/sales)")
+# ========================
 
 # --- LOAD ML MODEL AT STARTUP ---
 ml_model = None
