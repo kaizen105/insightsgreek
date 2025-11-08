@@ -1,7 +1,11 @@
+Flask
+Flask-SQLAlchemy
+Flask-CORS
+PyJWT
+gunicorn
 pandas
 scikit-learn
 joblib
 nltk
 textblob
-Flask
-gunicorn
+google-generativeai
