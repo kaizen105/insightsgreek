@@ -155,7 +155,7 @@ function generateWordCloud(wordData) {
     
     // 2. Get the display size we want
     const width = container.offsetWidth;
-    const height = 00; // Matches your CSS height
+    const height = 500; // Matches your CSS height
 
     // 3. Set the actual internal resolution higher based on DPR
     canvas.width = width * dpr;
