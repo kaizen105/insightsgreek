@@ -1,3 +1,5 @@
+let myLeadScoreChart;
+let myTrendChart;
 // Helper to get token/user from either storage (matches other pages)
 function getToken() { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
 function getUser() { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')); }
@@ -50,14 +52,21 @@ function updateStats(stats) {
 // 1. NEW: AI Lead Score Chart (Doughnut)
 function generateLeadScoreChart(leads) {
     const ctx = document.getElementById('leadScoreChart').getContext('2d');
-    new Chart(ctx, {
+    
+    // 1. DESTROY THE OLD CHART if it exists
+    if (myLeadScoreChart) {
+        myLeadScoreChart.destroy();
+    }
+
+    // 2. CREATE THE NEW CHART and store it
+    myLeadScoreChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['High Quality', 'Medium Quality', 'Low Quality'],
             datasets: [{
                 data: [leads.high, leads.medium, leads.low],
                 backgroundColor: [
-                    '#059669', // Green (matches salesperson UI)
+                    '#059669', // Green
                     '#d97706', // Amber
                     '#dc2626'  // Red
                 ],
@@ -78,7 +87,14 @@ function generateLeadScoreChart(leads) {
 // 2. Trend Chart (Line)
 function generateTrendChart(trends) {
     const ctx = document.getElementById('trendChart').getContext('2d');
-    new Chart(ctx, {
+
+    // 1. DESTROY THE OLD CHART if it exists
+    if (myTrendChart) {
+        myTrendChart.destroy();
+    }
+
+    // 2. CREATE THE NEW CHART and store it
+    myTrendChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: trends.labels,
