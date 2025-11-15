@@ -847,111 +847,114 @@ textarea {
     }
 }
 
-/* ========== MANAGER DASHBOARD ========== */
-
-.stats-overview {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-.stat-card {
+/* Dashboard Section - Base Style */
+.dashboard-section {
     background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    text-align: center;
-    transition: all 0.3s ease;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    animation: fadeInUp 0.6s ease-out both;
+    min-height: 600px;
 }
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-}
-.stat-card h4 {
-    color: #555;
-    font-size: 14px;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-}
-.stat-card p {
-    font-size: 2.2rem;
+
+.dashboard-section h3 {
+    color: #667eea;
+    margin-bottom: 30px;
+    font-size: 1.8rem;
     font-weight: 700;
-    color: #667eea;
 }
 
-/* This is the new "white box" for all charts/lists */
-.dashboard-card {
+/* Word Cloud - PROPERLY FIXED */
+#wordcloud {
+    width: 100% !important;
+    height: 500px !important;
+    min-height: 500px !important;
+    background: #f8f9fa;
+    border-radius: 10px;
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+/* Chart Container - PROPERLY FIXED FOR OVERLAP */
+.chart-container {
     background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
-    
-    /* THIS IS THE FIX for chart titles */
-    position: relative; 
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+    margin-bottom: 30px !important;
+    margin-top: 30px !important;
+    clear: both !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 500px;
 }
 
-.dashboard-card h3 {
+.chart-container h3 {
     color: #667eea;
-    margin-bottom: 25px;
-    font-size: 1.3rem;
-    font-weight: 600;
+    margin-bottom: 30px;
+    font-size: 1.8rem;
+    font-weight: 700;
     text-align: center;
+    width: 100%;
 }
 
-/* This is for the 2-column layout */
-.charts-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+/* Sentiment Chart - PROPERLY CENTERED */
+#sentimentChart {
+    width: 600px !important;
+    height: 400px !important;
+    display: block !important;
+    margin: 0 auto !important;
 }
 
-/* Default canvas style for pie/doughnut charts */
-.chart-canvas {
-    width: 100% !important;
-    max-width: 400px; /* Prevents pie charts from getting huge */
-    height: 350px;
-    margin: 0 auto;
-    display: block;
-}
-
-/* Canvas style for full-width charts (trends, wordcloud) */
-.chart-canvas-large {
-    width: 100% !important;
-    height: 400px;
-    display: block;
-}
-
-/* --- Feedback List (Your code, looks good) --- */
+/* Feedback List */
 .feedback-list {
     max-height: 500px;
     overflow-y: auto;
 }
+
 .feedback-item {
-    padding: 15px;
+    padding: 20px;
     background: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 12px;
+    border-radius: 12px;
+    margin-bottom: 15px;
     border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+    animation: slideInLeft 0.4s ease-out both;
 }
+
+.feedback-item:hover {
+    transform: translateX(8px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
 .feedback-header {
     display: flex;
     justify-content: space-between;
+    margin-bottom: 12px;
     align-items: center;
-    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
-.feedback-header strong { color: #667eea; }
-.feedback-header span { color: #999; font-size: 12px; }
-.feedback-item p { color: #333; line-height: 1.6; }
 
-
-/* --- Responsive layout for small screens --- */
-@media (max-width: 768px) {
-    .charts-row {
-        grid-template-columns: 1fr; /* Stack charts on mobile */
-    }
+.feedback-header strong {
+    color: #667eea;
+    font-size: 16px;
 }
+
+.feedback-header span {
+    color: #999;
+    font-size: 13px;
+}
+
+.feedback-item p {
+    color: #666;
+    line-height: 1.6;
+    font-size: 14px;
+}
+
 /* ========== DEVELOPER PANEL ========== */
 .admin-tabs {
     display: flex;
