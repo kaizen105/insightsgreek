@@ -47,7 +47,6 @@ async function loadDashboardData() {
         const data = await response.json();
         
         if (response.ok) {
-            // These are the only functions we call now
             updateStats(data.stats);
             generateLeadScoreChart(data.stats.leads);
             generateTrendChart(data.trends);
@@ -120,7 +119,6 @@ function generateTrendChart(trends) {
             animation: { duration: 1000, easing: 'easeOutQuart' },
             plugins: { 
                 legend: { display: false },
-                title: { display: true, text: 'Feedback Trends (7 Days)' }
             },
             scales: { 
                 y: { 
@@ -136,18 +134,19 @@ function generateTrendChart(trends) {
     });
 }
 
-// 3. Word Cloud (Fixed)
+// 3. Word Cloud
 function generateWordCloud(wordData) {
     const canvas = document.getElementById('wordcloud');
-    const container = document.getElementById('wordcloud-container');
+    const container = canvas.parentElement; // This is now .dashboard-card
     if (!container) return; 
     
     const dpr = window.devicePixelRatio || 1;
-    const width = 400;  // Fixed width from Aims
-    const height = 300; // Fixed height from Aims
+    // Get width from container, use fixed CSS height
+    const width = container.clientWidth; 
+    const height = 400; // Matches .chart-canvas-large height
     
-    canvas.width = width * dpr * 1.5;
-    canvas.height = height * dpr * 1.5;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
@@ -164,8 +163,6 @@ function generateWordCloud(wordData) {
         backgroundColor: 'transparent',
         shape: 'rectangular'
     });
-
-    setTimeout(() => { container.style.opacity = '1'; }, 100);
 }
 
 // 4. Sentiment Chart (Pie)
@@ -204,10 +201,10 @@ function displayRecentFeedbacks(feedbacks) {
         const div = document.createElement('div');
         div.className = 'feedback-item';
         
-        let scoreBadge = ''; // Default empty
-        if (f.lead_label) { // It's a Lead
+        let scoreBadge = ''; 
+        if (f.lead_label) { 
              scoreBadge = `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.lead_label === 'High' ? '#dcfce7; color:#166534' : '#f3f4f6; color:#374151'}">${f.lead_label} (${(f.lead_score*100).toFixed(0)}%)</span>`;
-        } else if (f.sentiment_label) { // It's Feedback
+        } else if (f.sentiment_label) {
             scoreBadge = `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.sentiment_label === 'Positive' ? '#dcfce7; color:#166534' : (f.sentiment_label === 'Negative' ? '#fee2e2; color:#991b1b' : '#f3f4f6; color:#374151')}">${f.sentiment_label}</span>`;
         }
             
