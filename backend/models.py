@@ -41,12 +41,17 @@ class Feedback(db.Model):
     salesperson_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     text = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='pending')  # pending, reviewed, archived
+    status = db.Column(db.String(20), default='pending')
     
-    # --- NEW ML FIELDS ---
-    lead_score = db.Column(db.Float, nullable=True)
-    lead_label = db.Column(db.String(20), nullable=True)  # High, Medium, Low
-    # ---------------------
+    # --- FOR LEADS ---
+    # These are your existing columns. Keep them!
+    lead_score = db.Column(db.Float, nullable=True)     # For "Win %"
+    lead_label = db.Column(db.String(20), nullable=True) # For "High/Medium/Low"
+
+    # --- ADD THESE 2 NEW LINES FOR FEEDBACK ---
+    sentiment_score = db.Column(db.Float, nullable=True)      # For "Sentiment %"
+    sentiment_label = db.Column(db.String(20), nullable=True) # For "Positive/Negative/Neutral"
+    # ----------------------------------------
 
     def to_dict(self):
         return {
@@ -56,12 +61,13 @@ class Feedback(db.Model):
             'text': self.text,
             'timestamp': self.timestamp.isoformat(),
             'status': self.status,
-            # Include new fields in API responses
+            
+            # Now your API can return everything
             'lead_score': self.lead_score,
-            'lead_label': self.lead_label
+            'lead_label': self.lead_label,
+            'sentiment_score': self.sentiment_score,
+            'sentiment_label': self.sentiment_label
         }
-
-
 class Product(db.Model):
     __tablename__ = 'products'
     

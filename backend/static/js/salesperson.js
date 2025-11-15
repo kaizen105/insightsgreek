@@ -56,23 +56,39 @@ function showTab(tabName) {
     }
 }
 
-// === SHARED SUBMISSION FUNCTION ===
+// === SHARED SUBMISSION FUNCTION (UPDATED) ===
 async function submitData(type) {
-    // Determine which elements to use based on type ('feedback' or 'lead')
-    const isLead = type === 'lead';
+    // 1. Determine which elements to use
+    const isLead = (type === 'lead');
     const inputId = isLead ? 'leadText' : 'feedbackText';
-    const resultSectionId = isLead ? 'aiResultLead' : 'aiResultFeedback';
-    const labelId = isLead ? 'aiLabelLead' : 'aiLabelFeedback';
-    const scoreId = isLead ? 'aiScoreLead' : 'aiScoreFeedback';
-
     const text = document.getElementById(inputId).value;
-    if (!text.trim()) { showStatus('Please enter some text first', 'error'); return; }
+
+    if (!text.trim()) { 
+        showStatus('Please enter some text first', 'error'); 
+        return; 
+    }
+
+    // 2. THIS IS THE NEW LOGIC
+    // Set the correct API endpoint and result elements based on type
+    let apiUrl, resultSectionId, labelId, scoreId;
+
+    if (isLead) {
+        apiUrl = '/api/submit-lead'; // <-- Calls the Lead model
+        resultSectionId = 'aiResultLead';
+        labelId = 'aiLabelLead';
+        scoreId = 'aiScoreLead';
+    } else {
+        apiUrl = '/api/analyze-feedback'; // <-- Calls the Feedback (TextBlob) model
+        resultSectionId = 'aiResultFeedback';
+        labelId = 'aiLabelFeedback';
+        scoreId = 'aiScoreFeedback';
+    }
+    // ------------------------------------
 
     try {
-        // We use the same API endpoint for now, as the model handles both text types well
-        const response = await fetch('/api/feedback', {
+        // 3. Call the correct API URL
+        const response = await secureFetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
             body: JSON.stringify({ text: text })
         });
         const data = await response.json();
@@ -81,17 +97,37 @@ async function submitData(type) {
             showStatus(`${isLead ? 'Lead' : 'Feedback'} submitted successfully!`, 'success');
             document.getElementById(inputId).value = ''; // Clear input
             
-            // Show AI Result in the correct tab
-            if (data.ml_result) {
+            // 4. Handle the two different types of results
+            let resultData;
+            if (isLead && data.ml_result) {
+                resultData = data.ml_result; // From the ML model
+            } else if (!isLead && data.sentiment_result) {
+                resultData = data.sentiment_result; // From the Sentiment model
+            }
+
+            // 5. Display the result
+            if (resultData) {
                 const labelEl = document.getElementById(labelId);
-                document.getElementById(scoreId).textContent = (data.ml_result.score * 100).toFixed(1);
-                labelEl.textContent = data.ml_result.label;
+                let scoreText;
+                let labelColor;
 
-                // Color coding
-                if (data.ml_result.label === 'High') labelEl.style.color = '#059669';
-                else if (data.ml_result.label === 'Medium') labelEl.style.color = '#d97706';
-                else labelEl.style.color = '#dc2626';
+                if (isLead) {
+                    // This is a Lead (0 to 1 score)
+                    scoreText = (resultData.score * 100).toFixed(1);
+                    if (resultData.label === 'High') labelColor = '#059669';
+                    else if (resultData.label === 'Medium') labelColor = '#d97706';
+                    else labelColor = '#dc2626';
+                } else {
+                    // This is Feedback (-1 to 1 score)
+                    scoreText = resultData.score.toFixed(2); // Show sentiment score
+                    if (resultData.label === 'Positive') labelColor = '#059669';
+                    else if (resultData.label === 'Neutral') labelColor = '#6b7280';
+                    else labelColor = '#dc2626';
+                }
 
+                document.getElementById(scoreId).textContent = scoreText;
+                labelEl.textContent = resultData.label;
+                labelEl.style.color = labelColor;
                 document.getElementById(resultSectionId).style.display = 'block';
             }
         } else {
@@ -101,7 +137,6 @@ async function submitData(type) {
         showStatus('Error submitting data', 'error');
     }
 }
-
 // === GRAMMAR CHECKER (Now handles both inputs) ===
 async function checkGrammar(inputId) {
     const text = document.getElementById(inputId).value;

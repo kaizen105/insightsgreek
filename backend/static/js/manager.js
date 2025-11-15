@@ -1,5 +1,7 @@
 let myLeadScoreChart;
 let myTrendChart;
+let mySentimentChart;
+
 // Helper to get token/user from either storage (matches other pages)
 function getToken() { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
 function getUser() { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')); }
@@ -62,6 +64,7 @@ async function loadDashboardData() {
             generateTrendChart(data.trends);
             generateWordCloud(data.wordcloud_data);
             displayRecentFeedbacks(data.recent);
+            generateSentimentChart(data.sentiment);
         }
     } catch (error) {
         console.error('Error loading dashboard:', error);
@@ -171,6 +174,44 @@ function generateWordCloud(wordData) {
         color: 'random-dark',
         rotateRatio: 0,
         backgroundColor: 'transparent'
+    });
+}
+// 4. NEW: Sentiment Chart (Pie)
+function generateSentimentChart(sentiment) {
+    const ctx = document.getElementById('sentimentChart').getContext('2d');
+    
+    // Destroy the old chart if it exists
+    if (mySentimentChart) {
+        mySentimentChart.destroy();
+    }
+
+    // Create the new chart
+    mySentimentChart = new Chart(ctx, {
+        type: 'pie', // Pie or Doughnut works well
+        data: {
+            labels: ['Positive', 'Neutral', 'Negative'],
+            datasets: [{
+                data: [
+                    sentiment.positive, 
+                    sentiment.neutral, 
+                    sentiment.negative
+                ],
+                backgroundColor: [
+                    '#059669', // Positive (Green)
+                    '#6b7280', // Neutral (Gray)
+                    '#dc2626'  // Negative (Red)
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                title: { display: true, text: 'Customer Feedback Sentiment' }
+            }
+        }
     });
 }
 // Display recent list

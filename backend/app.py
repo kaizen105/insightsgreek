@@ -9,21 +9,16 @@ import csv
 import io
 from collections import Counter
 import re
-import sys 
-import io 
+import sys
 import random
 # ========== NLTK RUNTIME PATH FIX ==========
 import nltk
-import os
+from textblob import TextBlob
 
 # This is the directory our build script downloads to
 NLTK_DATA_DIR = '/opt/render/nltk_data'
 
 # (Find the old NLTK fix you added and replace it with this)
-
-# ========== NLTK RUNTIME PATH FIX ==========
-import nltk
-import os
 
 # Get the path to the 'backend' folder
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -189,66 +184,6 @@ if load_model:
     else:
         print("WARNING: Lead prediction model failed to load.")
 # --------------------------------
-# =======================================================
-# --- TEMPORARY ADMIN ROUTE TO FORCE RE-SEEDING ---
-# =======================================================
-@app.route('/admin/force-reseed')
-def force_reseed():
-    print("!!! ADMIN: FORCING DATABASE RE-SEED !!!")
-
-    # 1. WIPE THE FEEDBACK TABLE
-    try:
-        db.session.query(Feedback).delete()
-        db.session.commit()
-        print("✅ SUCCESS: Feedback table wiped.")
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ ERROR: Could not wipe table: {e}")
-        return jsonify({"error": str(e)})
-
-    # 2. RUN THE SEEDING LOGIC AGAIN
-    try:
-        print("🌱 Checking database status...")
-        sales_user = User.query.filter_by(role='salesperson').first()
-        if not sales_user:
-            print("❌ ERROR: 'salesperson' user not found. Cannot seed.")
-            return jsonify({"error": "Salesperson user not found"})
-
-        print("📊 Seeding dashboard data...")
-        samples = [
-            ("Customer absolutely loved the demo. They have budget approved and want to start next week.", 0.95, "High"),
-            ("Not interested at all. Said our pricing is ridiculous compared to competitors.", 0.10, "Low"),
-            ("Meeting went okay. They liked Feature A but hated Feature B. Need to nurture.", 0.55, "Medium"),
-            ("Very keen! Asked for a custom quote for 500 seats. Hot lead!", 0.98, "High"),
-            ("They are stuck in an existing contract for another 6 months. Call back later.", 0.30, "Low"),
-            ("Great conversation. Decision maker needs approval from CEO, but looks promising.", 0.75, "High"),
-            ("Just looking around, no immediate need. Maybe next year.", 0.20, "Low"),
-            ("Had technical issues during the demo, they got frustrated and left early.", 0.15, "Low"),
-            ("Wow, they were impressed by the AI features. Wants a follow-up meeting with their CTO.", 0.92, "High"),
-            ("Standard inquiry, sent standard pricing sheet. Waiting to hear back.", 0.50, "Medium"),
-        ]
-        
-        for _ in range(4): # Create 40 entries
-            for text, score, label in samples:
-                days_ago = random.randint(0, 9)
-                hours_ago = random.randint(0, 23)
-                fb = Feedback(
-                    salesperson_id=sales_user.id, text=text, lead_score=score, lead_label=label,
-                    timestamp=datetime.utcnow() - timedelta(days=days_ago, hours=hours_ago),
-                    status='reviewed' if days_ago > 2 else 'new'
-                )
-                db.session.add(fb)
-        
-        db.session.commit()
-        print("✅✅✅ SUCCESS: Dashboard data has been re-seeded!")
-        return jsonify({"message": "SUCCESS: Database has been re-seeded."})
-    
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ ERROR: Could not re-seed data: {e}")
-        return jsonify({"error": str(e)})
-# =======================================================
-
 # JWT token decorator
 def token_required(f):
     @wraps(f)
@@ -364,7 +299,97 @@ def register():
 
     return jsonify({'message': 'Registration successful! Please login.'}), 201
 
+# ========== API ROUTES - Feedback & ML ==========
 
+@app.route('/api/submit-lead', methods=['POST'])
+@token_required
+@role_required('salesperson')
+def submit_lead(current_user):
+    data = request.get_json()
+    text = data.get('text')
+    
+    if not text:
+        return jsonify({'error': 'Lead text is required'}), 400
+    
+    # --- ML SCORING (FOR LEADS) ---
+    lead_score = None
+    lead_label = None
+    if ml_model and predict_probability:
+        try:
+            lead_score = predict_probability(ml_model, text)
+            if lead_score >= 0.7: lead_label = "High"
+            elif lead_score >= 0.45: lead_label = "Medium"
+            else: lead_label = "Low"
+        except Exception as e:
+            print(f"ML Prediction failed: {e}")
+            lead_score = 0.0
+            lead_label = "Error"
+    # ------------------
+
+    # Save to the specific LEAD columns
+    new_entry = Feedback(
+        salesperson_id=current_user.id,
+        text=text,
+        lead_score=lead_score,   # <-- Saves to lead column
+        lead_label=lead_label,   # <-- Saves to lead column
+        status='lead'            # <-- Set a status so we can filter
+    )
+    
+    db.session.add(new_entry)
+    db.session.add(ActivityLog(user_id=current_user.id, action='lead_submit', details=f'Lead {new_entry.id} submitted (Score: {lead_score})'))
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Lead submitted',
+        'ml_result': {
+            'score': lead_score,
+            'label': lead_label
+        }
+    }), 201
+
+
+@app.route('/api/analyze-feedback', methods=['POST'])
+@token_required
+@role_required('salesperson')
+def analyze_feedback(current_user):
+    data = request.get_json()
+    text = data.get('text')
+    
+    if not text:
+        return jsonify({'error': 'Feedback text is required'}), 400
+
+    # --- NEW SENTIMENT MODEL LOGIC ---
+    blob = TextBlob(text)
+    sentiment_score = blob.sentiment.polarity  # Score from -1.0 to 1.0
+    
+    if sentiment_score > 0.2: sentiment_label = "Positive"
+    elif sentiment_score < -0.1: sentiment_label = "Negative"
+    else: sentiment_label = "Neutral"
+    # -----------------------
+
+    # Save to the specific SENTIMENT columns
+    new_entry = Feedback(
+        salesperson_id=current_user.id,
+        text=text,
+        sentiment_score=sentiment_score, # <-- Saves to sentiment column
+        sentiment_label=sentiment_label, # <-- Saves to sentiment column
+        status='feedback'                # <-- Set a status
+    )
+    
+    db.session.add(new_entry)
+    db.session.add(ActivityLog(user_id=current_user.id, action='feedback_submit', details=f'Feedback {new_entry.id} submitted (Sentiment: {sentiment_label})'))
+    db.session.commit()
+    
+    # Return the new sentiment result
+    return jsonify({
+        'message': 'Feedback submitted',
+        'sentiment_result': {
+            'score': sentiment_score,
+            'label': sentiment_label
+        }
+    }), 201
+
+# (You can keep your /api/predict-lead and /api/check-grammar routes as they were)
 # ========== API: CHATBOT ==========
 @app.route('/api/chat', methods=['POST'])
 @token_required
@@ -421,55 +446,6 @@ def delete_product(current_user, product_id):
 
 
 # ========== API ROUTES - Feedback & ML ==========
-
-@app.route('/api/feedback', methods=['POST'])
-@token_required
-@role_required('salesperson')
-def submit_feedback(current_user):
-    data = request.get_json()
-    text = data.get('text')
-    
-    if not text:
-        return jsonify({'error': 'Feedback text is required'}), 400
-    
-    # --- ML SCORING ---
-    lead_score = None
-    lead_label = None
-    if ml_model and predict_probability:
-        try:
-            lead_score = predict_probability(ml_model, text)
-            if lead_score >= 0.7:
-                lead_label = "High"
-            elif lead_score >= 0.45:
-                lead_label = "Medium"
-            else:
-                lead_label = "Low"
-        except Exception as e:
-            print(f"ML Prediction failed: {e}")
-            lead_score = 0.0
-            lead_label = "Error"
-    # ------------------
-
-    feedback = Feedback(
-        salesperson_id=current_user.id,
-        text=text,
-        lead_score=lead_score,
-        lead_label=lead_label
-    )
-    
-    db.session.add(feedback)
-    db.session.add(ActivityLog(user_id=current_user.id, action='feedback_submit', details=f'Feedback {feedback.id} submitted (Score: {lead_score})'))
-    db.session.commit()
-    
-    return jsonify({
-        'message': 'Feedback submitted',
-        'feedback': feedback.to_dict(),
-        'ml_result': {
-            'score': lead_score,
-            'label': lead_label
-        }
-    }), 201
-
 @app.route('/api/predict-lead', methods=['POST'])
 @token_required
 def predict_lead_standalone(current_user):
@@ -508,30 +484,38 @@ def check_grammar(current_user):
 
 # ========== API ROUTES - Dashboard ==========
 
+# ========== API ROUTES - Dashboard ==========
+
 @app.route('/api/dashboard', methods=['GET'])
 @token_required
 @role_required('manager')
 def get_dashboard(current_user):
-    feedbacks = Feedback.query.all()
-    total_feedbacks = len(feedbacks)
+    
+    # --- General Stats ---
+    total_feedbacks = Feedback.query.count()
     week_ago = datetime.utcnow() - timedelta(days=7)
     week_feedbacks = Feedback.query.filter(Feedback.timestamp >= week_ago).count()
     active_sales = User.query.filter_by(role='salesperson').count()
     
-    # --- ML STATS ---
+    # --- LEAD STATS (For Lead Chart) ---
     high_leads = Feedback.query.filter(Feedback.lead_label == 'High').count()
     medium_leads = Feedback.query.filter(Feedback.lead_label == 'Medium').count()
     low_leads = Feedback.query.filter(Feedback.lead_label == 'Low').count()
 
-    # Wordcloud from High quality leads only
-    high_quality_texts = [f.text for f in feedbacks if f.lead_label == 'High']
-    source_text = ' '.join(high_quality_texts) if len(high_quality_texts) > 5 else ' '.join([f.text for f in feedbacks])
+    # --- SENTIMENT STATS (For Sentiment Chart) ---
+    pos_count = Feedback.query.filter(Feedback.sentiment_label == 'Positive').count()
+    neg_count = Feedback.query.filter(Feedback.sentiment_label == 'Negative').count()
+    neu_count = Feedback.query.filter(Feedback.sentiment_label == 'Neutral').count()
+
+    # --- Wordcloud (from high-quality LEADS) ---
+    high_quality_texts = [f.text for f in Feedback.query.filter(Feedback.lead_label == 'High').all()]
+    source_text = ' '.join(high_quality_texts) if len(high_quality_texts) > 5 else ' '.join([f.text for f in Feedback.query.filter(Feedback.lead_label != None).all()])
     words = re.findall(r'\w+', source_text.lower())
     stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'is', 'was', 'are', 'were', 'of', 'with', 'it', 'this', 'that', 'we', 'i', 'they'}
     word_counts = Counter(w for w in words if w not in stop_words and len(w) > 2)
     wordcloud_data = [[word, count] for word, count in word_counts.most_common(50)]
     
-    # Trends data
+    # --- Trends Chart (for ALL entries) ---
     trends_labels = []
     trends_data = []
     for i in range(6, -1, -1):
@@ -542,18 +526,9 @@ def get_dashboard(current_user):
         trends_labels.append(day.strftime('%m/%d'))
         trends_data.append(count)
     
+    # --- Recent Entries (for ALL entries) ---
     recent = Feedback.query.order_by(Feedback.timestamp.desc()).limit(10).all()
     
-    # Simple sentiment fallback
-    positive_words = {'good', 'great', 'excellent', 'amazing', 'wonderful', 'love', 'best', 'happy', 'satisfied'}
-    negative_words = {'bad', 'poor', 'terrible', 'worst', 'hate', 'disappointed', 'awful', 'useless'}
-    pos_count, neg_count, neu_count = 0, 0, 0
-    for f in feedbacks:
-        words_in_f = set(re.findall(r'\w+', f.text.lower()))
-        if len(words_in_f & positive_words) > len(words_in_f & negative_words): pos_count += 1
-        elif len(words_in_f & negative_words) > len(words_in_f & positive_words): neg_count += 1
-        else: neu_count += 1
-
     return jsonify({
         'stats': {
             'total': total_feedbacks,
@@ -561,12 +536,11 @@ def get_dashboard(current_user):
             'active_sales': active_sales,
             'leads': {'high': high_leads, 'medium': medium_leads, 'low': low_leads}
         },
+        'sentiment': {'positive': pos_count, 'neutral': neu_count, 'negative': neg_count},
         'wordcloud_data': wordcloud_data,
         'trends': {'labels': trends_labels, 'data': trends_data},
         'recent': [f.to_dict() for f in recent],
-        'sentiment': {'positive': pos_count, 'neutral': neu_count, 'negative': neg_count}
     }), 200
-    
 
 
 @app.route('/api/download-report', methods=['GET'])
