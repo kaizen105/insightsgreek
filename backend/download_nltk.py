@@ -3,10 +3,12 @@ import textblob.download_corpora
 import sys
 import os
 
-# Get the directory where this script is located (the project root)
+# Get the path to the 'backend' folder where this script lives
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Define the download directory as a folder named 'nltk_data' in the root
-DOWNLOAD_DIR = os.path.join(BASE_DIR, 'nltk_data')
+# Get the path to the project root (one level up)
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+# Define the download directory as 'nltk_data' in the PROJECT ROOT
+DOWNLOAD_DIR = os.path.join(PROJECT_ROOT, 'nltk_data')
 
 # Create the directory if it doesn't exist
 if not os.path.exists(DOWNLOAD_DIR):
