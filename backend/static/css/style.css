@@ -847,66 +847,56 @@ textarea {
     }
 }
 
-/* Dashboard Section - Base Style */
+/* Dashboard Section - SIMPLE AND CLEAN */
 .dashboard-section {
     background: white;
-    padding: 40px;
+    padding: 30px;
     border-radius: 15px;
     box-shadow: 0 5px 25px rgba(0,0,0,0.1);
     margin-bottom: 30px;
     animation: fadeInUp 0.6s ease-out both;
-    min-height: 600px;
 }
 
 .dashboard-section h3 {
     color: #667eea;
-    margin-bottom: 30px;
-    font-size: 1.8rem;
+    margin-bottom: 25px;
+    font-size: 1.5rem;
     font-weight: 700;
 }
 
-/* Word Cloud - PROPERLY FIXED */
+/* Word Cloud - SIMPLE FIX */
 #wordcloud {
-    width: 100% !important;
-    height: 500px !important;
-    min-height: 500px !important;
-    background: #f8f9fa;
+    width: 100%;
+    height: 500px;
+    background: white;
     border-radius: 10px;
-    display: block !important;
-    margin: 0 auto !important;
+    display: block;
 }
 
-/* Chart Container - PROPERLY FIXED FOR OVERLAP */
+/* Chart Container - SIMPLE FIX */
 .chart-container {
     background: white;
-    padding: 40px;
+    padding: 30px;
     border-radius: 15px;
     box-shadow: 0 5px 25px rgba(0,0,0,0.1);
-    margin-bottom: 30px !important;
-    margin-top: 30px !important;
-    clear: both !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    width: 100% !important;
-    min-height: 500px;
+    margin-bottom: 30px;
+    text-align: center;
 }
 
 .chart-container h3 {
     color: #667eea;
-    margin-bottom: 30px;
-    font-size: 1.8rem;
+    margin-bottom: 25px;
+    font-size: 1.5rem;
     font-weight: 700;
-    text-align: center;
-    width: 100%;
 }
 
-/* Sentiment Chart - PROPERLY CENTERED */
+/* Sentiment Chart - SIMPLE FIX */
 #sentimentChart {
-    width: 600px !important;
-    height: 400px !important;
-    display: block !important;
-    margin: 0 auto !important;
+    width: 100%;
+    max-width: 600px;
+    height: 400px;
+    margin: 0 auto;
+    display: block;
 }
 
 /* Feedback List */
