@@ -1,31 +1,35 @@
 let myLeadScoreChart;
 let myTrendChart;
-let mySentimentChart;
-
-// Helper to get token/user from either storage
+// Helper to get token/user from either storage (matches other pages)
 function getToken() { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
 function getUser() { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')); }
-
 /**
- * This function automatically adds your token and logs you out
+ * This is the missing function.
+ * It automatically adds your token and logs you out
  * if the token is bad.
  */
 async function secureFetch(url, options = {}) {
     const token = getToken();
+
+    // Set up default headers
     const defaultHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
     };
+
+    // Merge our default headers with any custom headers
     options.headers = { ...defaultHeaders, ...options.headers };
+
     const response = await fetch(url, options);
 
+    // This part handles expired tokens
     if (response.status === 401) {
-        logout(); 
+        logout(); // Call your existing logout function
         throw new Error('Unauthorized');
     }
+
     return response;
 }
-
 // Load dashboard on page load
 window.addEventListener('DOMContentLoaded', async () => {
     const user = getUser();
@@ -36,23 +40,28 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('username').textContent = user.username;
     await loadDashboardData();
-    // Keep-alive and auto-refresh
-    setInterval(loadDashboardData, 30000); 
+    setInterval(loadDashboardData, 30000);
 });
 
 // Load all dashboard data
 async function loadDashboardData() {
     try {
-        const response = await secureFetch('/api/dashboard');
+        const response = await secureFetch('/api/dashboard', {
+        });
+        
+        if (response.status === 401) {
+             logout(); 
+             return;
+        }
+
         const data = await response.json();
         
         if (response.ok) {
             updateStats(data.stats);
-            generateLeadScoreChart(data.stats.leads);
+            generateLeadScoreChart(data.stats.leads); // NEW: ML Score Chart
             generateTrendChart(data.trends);
             generateWordCloud(data.wordcloud_data);
             displayRecentFeedbacks(data.recent);
-            generateSentimentChart(data.sentiment);
         }
     } catch (error) {
         console.error('Error loading dashboard:', error);
@@ -66,26 +75,33 @@ function updateStats(stats) {
     document.getElementById('activeSales').textContent = stats.active_sales || 0;
 }
 
-// 1. AI Lead Score Chart
+// 1. NEW: AI Lead Score Chart (Doughnut)
 function generateLeadScoreChart(leads) {
     const ctx = document.getElementById('leadScoreChart').getContext('2d');
+    
+    // 1. DESTROY THE OLD CHART if it exists
     if (myLeadScoreChart) {
         myLeadScoreChart.destroy();
     }
+
+    // 2. CREATE THE NEW CHART and store it
     myLeadScoreChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['High Quality', 'Medium Quality', 'Low Quality'],
             datasets: [{
                 data: [leads.high, leads.medium, leads.low],
-                backgroundColor: ['#059669', '#d97706', '#dc2626'],
+                backgroundColor: [
+                    '#059669', // Green
+                    '#d97706', // Amber
+                    '#dc2626'  // Red
+                ],
                 borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 1000, easing: 'easeOutQuart' },
             plugins: {
                 legend: { position: 'bottom' },
                 title: { display: true, text: 'AI Lead Quality Distribution' }
@@ -97,9 +113,13 @@ function generateLeadScoreChart(leads) {
 // 2. Trend Chart (Line)
 function generateTrendChart(trends) {
     const ctx = document.getElementById('trendChart').getContext('2d');
+
+    // 1. DESTROY THE OLD CHART if it exists
     if (myTrendChart) {
         myTrendChart.destroy();
     }
+
+    // 2. CREATE THE NEW CHART and store it
     myTrendChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -116,97 +136,54 @@ function generateTrendChart(trends) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 1000, easing: 'easeOutQuart' },
-            plugins: { 
-                legend: { display: false },
-            },
-            scales: { 
-                y: { 
-                    beginAtZero: true, 
-                    ticks: { precision: 0 },
-                    title: { display: true, text: 'Feedback Count' }
-                },
-                x: {
-                    title: { display: true, text: 'Date (MM/DD)' }
-                }
-            }
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
         }
     });
 }
 
-// 3. Word Cloud
+// 3. Word Cloud (High-DPI / Retina Sharpness Fix)
 function generateWordCloud(wordData) {
     const canvas = document.getElementById('wordcloud');
-    const container = canvas.parentElement; // This is now .dashboard-card
-    if (!container) return; 
+    const container = canvas.parentElement;
     
+    // 1. Get the device pixel ratio (e.g., 2 for retina screens)
     const dpr = window.devicePixelRatio || 1;
-    // Get width from container, use fixed CSS height
-    const width = container.clientWidth; 
-    const height = 400; // Matches .chart-canvas-large height
     
+    // 2. Get the display size we want
+    const width = container.offsetWidth;
+    const height = 400; // Matches your CSS height
+
+    // 3. Set the actual internal resolution higher based on DPR
     canvas.width = width * dpr;
     canvas.height = height * dpr;
+
+    // 4. Force CSS to keep it the original display size
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
+    // 5. Draw, scaling up the font size by DPR so it doesn't look tiny
     WordCloud(canvas, {
         list: wordData,
-        gridSize: Math.round(16 * dpr),
-        weightFactor: (size) => size * 8 * dpr,
+        gridSize: Math.round(8 * dpr),
+        weightFactor: (size) => Math.pow(size, 2.3) * (canvas.width / 1000) * dpr * 0.8, // Tuned scaling
         fontFamily: 'Segoe UI, sans-serif',
-        color: () => {
-            const shades = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDA0DD', '#E879F9'];
-            return shades[Math.floor(Math.random() * shades.length)];
-        },
-        rotateRatio: 0.2,
-        backgroundColor: 'transparent',
-        shape: 'rectangular'
+        color: 'random-dark',
+        rotateRatio: 0,
+        backgroundColor: 'transparent'
     });
 }
-
-// 4. Sentiment Chart (Pie)
-function generateSentimentChart(sentiment) {
-    const ctx = document.getElementById('sentimentChart').getContext('2d');
-    if (mySentimentChart) {
-        mySentimentChart.destroy();
-    }
-    mySentimentChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ['Positive', 'Neutral', 'Negative'],
-            datasets: [{
-                data: [sentiment.positive, sentiment.neutral, sentiment.negative],
-                backgroundColor: ['#059669', '#6b7280', '#dc2626'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 1000, easing: 'easeOutQuart' },
-            plugins: {
-                legend: { position: 'bottom' },
-                title: { display: true, text: 'Customer Feedback Sentiment' }
-            }
-        }
-    });
-}
-
-// 5. Display recent list
+// Display recent list
 function displayRecentFeedbacks(feedbacks) {
     const list = document.getElementById('feedbackList');
-    list.innerHTML = ''; // Clear old list
+    list.innerHTML = '';
     feedbacks.forEach(f => {
         const div = document.createElement('div');
         div.className = 'feedback-item';
-        
-        let scoreBadge = ''; 
-        if (f.lead_label) { 
-             scoreBadge = `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.lead_label === 'High' ? '#dcfce7; color:#166534' : '#f3f4f6; color:#374151'}">${f.lead_label} (${(f.lead_score*100).toFixed(0)}%)</span>`;
-        } else if (f.sentiment_label) {
-            scoreBadge = `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.sentiment_label === 'Positive' ? '#dcfce7; color:#166534' : (f.sentiment_label === 'Negative' ? '#fee2e2; color:#991b1b' : '#f3f4f6; color:#374151')}">${f.sentiment_label}</span>`;
-        }
+        // Show ML score if available
+        const scoreBadge = f.lead_label ? 
+            `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.lead_label === 'High' ? '#dcfce7; color:#166534' : '#f3f4f6; color:#374151'}">${f.lead_label} (${(f.lead_score*100).toFixed(0)}%)</span>` 
+            : '';
             
         div.innerHTML = `
             <div class="feedback-header">
@@ -220,10 +197,11 @@ function displayRecentFeedbacks(feedbacks) {
     });
 }
 
-// 6. Download CSV Report
+// Download CSV Report
 async function downloadReport() {
     try {
-        const response = await secureFetch('/api/download-report');
+        const response = await secureFetch('/api/download-report', {
+        });
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -239,7 +217,6 @@ async function downloadReport() {
     }
 }
 
-// 7. Logout
 function logout() {
     localStorage.clear();
     sessionStorage.clear();

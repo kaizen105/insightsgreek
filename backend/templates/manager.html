@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manager - Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Chart.js for graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- WordCloud2.js for the word cloud -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
 </head>
 <body>
@@ -19,6 +21,7 @@
     </div>
 
     <div class="container">
+        <!-- 1. TOP STATS -->
         <div class="stats-overview">
             <div class="stat-card">
                 <h4>Total Feedbacks</h4>
@@ -34,36 +37,41 @@
             </div>
         </div>
 
-        <div class="dashboard-grid">
-            
-            <div class="dashboard-card">
+        <!-- 2. NEW AI CHARTS ROW (Flexbox for side-by-side on large screens) -->
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 30px;">
+            <!-- AI Lead Score (Pie Chart) -->
+            <div class="dashboard-section" style="flex: 1; min-width: 300px; margin-bottom: 0;">
                 <h3>AI Lead Scores</h3>
-                <canvas id="leadScoreChart" class="chart-canvas"></canvas>
-            </div>
-
-            <div class="dashboard-card">
-                <h3>Customer Sentiment</h3>
-                <canvas id="sentimentChart" class="chart-canvas"></canvas>
-            </div>
-
-            <div class="dashboard-card full-width">
-                <h3>Feedback Trends (7 Days)</h3>
-                <canvas id="trendChart" class="chart-canvas-large"></canvas>
-            </div>
-
-            <div class="dashboard-card full-width">
-                <h3>High-Value Keywords</h3>
-                <canvas id="wordcloud" class="chart-canvas-large"></canvas>
-            </div>
-            
-            <div class="dashboard-card full-width">
-                <h3>Recent Activity</h3>
-                <div id="feedbackList" class="feedback-list">
-                    <p style="color: #999;">Loading recent feedback...</p>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="leadScoreChart"></canvas>
                 </div>
             </div>
+            <!-- Trends (Line Chart) -->
+            <div class="dashboard-section" style="flex: 2; min-width: 400px; margin-bottom: 0;">
+                <h3>Feedback Trends (7 Days)</h3>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
 
-        </div> </div> <script src="{{ url_for('static', filename='js/app.js') }}" defer></script> 
-    <script src="{{ url_for('static', filename='js/manager.js') }}" defer></script>
+        <!-- 3. WORD CLOUD -->
+        <div class="dashboard-section">
+            <h3>High-Value Keywords</h3>
+            <div style="width: 100%; overflow: hidden;">
+                <canvas id="wordcloud" style="width: 100%; height: 400px;"></canvas>
+            </div>
+        </div>
+        <!-- 4. RECENT FEEDBACK LIST -->
+        <div class="dashboard-section">
+            <h3>Recent Activity</h3>
+            <div id="feedbackList" class="feedback-list">
+                <!-- Loaded by JS -->
+                <p style="color: #999;">Loading recent feedback...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/manager.js') }}"></script>
 </body>
 </html>
