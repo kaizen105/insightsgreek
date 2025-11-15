@@ -3,7 +3,33 @@ let myTrendChart;
 // Helper to get token/user from either storage (matches other pages)
 function getToken() { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
 function getUser() { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')); }
+/**
+ * This is the missing function.
+ * It automatically adds your token and logs you out
+ * if the token is bad.
+ */
+async function secureFetch(url, options = {}) {
+    const token = getToken();
 
+    // Set up default headers
+    const defaultHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+
+    // Merge our default headers with any custom headers
+    options.headers = { ...defaultHeaders, ...options.headers };
+
+    const response = await fetch(url, options);
+
+    // This part handles expired tokens
+    if (response.status === 401) {
+        logout(); // Call your existing logout function
+        throw new Error('Unauthorized');
+    }
+
+    return response;
+}
 // Load dashboard on page load
 window.addEventListener('DOMContentLoaded', async () => {
     const user = getUser();
