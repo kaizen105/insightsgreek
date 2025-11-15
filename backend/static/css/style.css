@@ -900,7 +900,19 @@ textarea {
     display: block !important;
     margin: 0 auto;
 }
-
+.chart-container {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    margin-top: 30px;
+    clear: both;
+    display: block;
+    width: 100%;
+    
+    position: relative; /* <-- ADD THIS LINE */
+}
 /* Feedback List */
 .feedback-list {
     max-height: 500px;
