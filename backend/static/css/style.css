@@ -850,69 +850,65 @@ textarea {
 /* Dashboard Section - Base Style */
 .dashboard-section {
     background: white;
-    padding: 30px;
+    padding: 40px;
     border-radius: 15px;
     box-shadow: 0 5px 25px rgba(0,0,0,0.1);
     margin-bottom: 30px;
     animation: fadeInUp 0.6s ease-out both;
+    min-height: 600px;
 }
 
 .dashboard-section h3 {
     color: #667eea;
-    margin-bottom: 25px;
-    font-size: 1.5rem;
+    margin-bottom: 30px;
+    font-size: 1.8rem;
     font-weight: 700;
 }
 
-/* Word Cloud - FIXED */
+/* Word Cloud - PROPERLY FIXED */
 #wordcloud {
     width: 100% !important;
     height: 500px !important;
+    min-height: 500px !important;
     background: #f8f9fa;
     border-radius: 10px;
     display: block !important;
+    margin: 0 auto !important;
 }
 
-/* Chart Container - FIXED FOR OVERLAP */
+/* Chart Container - PROPERLY FIXED FOR OVERLAP */
 .chart-container {
     background: white;
-    padding: 30px;
+    padding: 40px;
     border-radius: 15px;
     box-shadow: 0 5px 25px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
-    margin-top: 30px;
-    clear: both;
-    display: block;
-    width: 100%;
+    margin-bottom: 30px !important;
+    margin-top: 30px !important;
+    clear: both !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 500px;
 }
 
 .chart-container h3 {
     color: #667eea;
-    margin-bottom: 25px;
-    font-size: 1.5rem;
+    margin-bottom: 30px;
+    font-size: 1.8rem;
     font-weight: 700;
+    text-align: center;
+    width: 100%;
 }
 
-/* Sentiment Chart - FIXED */
+/* Sentiment Chart - PROPERLY CENTERED */
 #sentimentChart {
-    width: 100% !important;
+    width: 600px !important;
     height: 400px !important;
     display: block !important;
-    margin: 0 auto;
+    margin: 0 auto !important;
 }
-.chart-container {
-    background: white;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
-    margin-top: 30px;
-    clear: both;
-    display: block;
-    width: 100%;
-    
-    position: relative; /* <-- ADD THIS LINE */
-}
+
 /* Feedback List */
 .feedback-list {
     max-height: 500px;
