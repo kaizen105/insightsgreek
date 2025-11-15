@@ -144,36 +144,66 @@ with app.app_context():
     if not Feedback.query.first():
         print("📊 No feedback found. Seeding dashboard data...")
         sales_user = User.query.filter_by(role='salesperson').first()
+        
         if sales_user:
-            samples = [
-                ("Customer absolutely loved the demo. They have budget approved and want to start next week.", 0.95, "High"),
-                ("Not interested at all. Said our pricing is ridiculous compared to competitors.", 0.10, "Low"),
-                ("Meeting went okay. They liked Feature A but hated Feature B. Need to nurture.", 0.55, "Medium"),
+            # --- 1. SEED 20 SAMPLE LEADS ---
+            print("...Seeding 20 sample leads...")
+            lead_samples = [
+                ("Loved the demo, budget approved, wants to start next week.", 0.95, "High"),
                 ("Very keen! Asked for a custom quote for 500 seats. Hot lead!", 0.98, "High"),
-                ("They are stuck in an existing contract for another 6 months. Call back later.", 0.30, "Low"),
-                ("Great conversation. Decision maker needs approval from CEO, but looks promising.", 0.75, "High"),
+                ("Meeting went okay. They liked Feature A. Need to nurture.", 0.55, "Medium"),
                 ("Just looking around, no immediate need. Maybe next year.", 0.20, "Low"),
-                ("Had technical issues during the demo, they got frustrated and left early.", 0.15, "Low"),
-                ("Wow, they were impressed by the AI features. Wants a follow-up meeting with their CTO.", 0.92, "High"),
-                ("Standard inquiry, sent standard pricing sheet. Waiting to hear back.", 0.50, "Medium"),
-                # Add duplicates to bulk up data
-                ("Customer absolutely loved the demo. They have budget approved and want to start next week.", 0.95, "High"),
-                ("Very keen! Asked for a custom quote for 500 seats. Hot lead!", 0.98, "High"),
-                ("Just looking around, no immediate need. Maybe next year.", 0.20, "Low"),
+                ("Stuck in an existing contract for 6 months. Call back later.", 0.30, "Low"),
+                ("Great conversation. Decision maker needs approval from CEO.", 0.75, "High"),
+                ("Standard inquiry, sent pricing sheet. Waiting to hear back.", 0.50, "Medium"),
+                ("Had technical issues during the demo, they got frustrated.", 0.15, "Low"),
+                ("Impressed by the AI features. Wants a follow-up with their CTO.", 0.92, "High"),
+                ("Their team is too small for the Enterprise plan, pitched Startup pack.", 0.45, "Medium"),
             ]
-            # Create multiple entries spread over last 10 days for nice charts
-            for _ in range(4): 
-                for text, score, label in samples:
+            for _ in range(2): # Loop 2 times
+                for text, score, label in lead_samples: # 10 samples
                     days_ago = random.randint(0, 9)
-                    hours_ago = random.randint(0, 23)
                     fb = Feedback(
-                        salesperson_id=sales_user.id, text=text, lead_score=score, lead_label=label,
-                        timestamp=datetime.utcnow() - timedelta(days=days_ago, hours=hours_ago),
-                        status='reviewed' if days_ago > 2 else 'new'
+                        salesperson_id=sales_user.id, 
+                        text=text, 
+                        lead_score=score,    # <-- Use lead columns
+                        lead_label=label,    # <-- Use lead columns
+                        status='lead',       # <-- Set status
+                        timestamp=datetime.utcnow() - timedelta(days=days_ago)
                     )
                     db.session.add(fb)
+
+            # --- 2. SEED 20 SAMPLE FEEDBACK (with sentiment) ---
+            print("...Seeding 20 sample feedback entries...")
+            feedback_samples = [
+                ("I am extremely happy with the support team, solved my issue in 5 minutes!", 0.9, "Positive"),
+                ("The new update is fantastic, everything runs so much faster.", 0.8, "Positive"),
+                ("It's an okay product, but it's missing a few key features.", 0.1, "Neutral"),
+                ("I am so frustrated. The app crashed and I lost all my work.", -0.8, "Negative"),
+                ("The pricing is way too high for what you get.", -0.5, "Negative"),
+                ("The documentation is unclear and hard to follow.", -0.4, "Negative"),
+                ("I like the product, it does exactly what it says it will do.", 0.6, "Positive"),
+                ("The user interface is a bit clunky but it works.", 0.2, "Neutral"),
+                ("Your competitor offers the same thing for half the price.", -0.3, "Negative"),
+                ("Just wanted to say thanks, this tool saved me hours of work.", 1.0, "Positive"),
+            ]
+            for _ in range(2): # Loop 2 times
+                for text, score, label in feedback_samples: # 10 samples
+                    days_ago = random.randint(0, 9)
+                    fb = Feedback(
+                        salesperson_id=sales_user.id, 
+                        text=text, 
+                        sentiment_score=score, # <-- Use sentiment columns
+                        sentiment_label=label, # <-- Use sentiment columns
+                        status='feedback',     # <-- Set status
+                        timestamp=datetime.utcnow() - timedelta(days=days_ago)
+                    )
+                    db.session.add(fb)
+
             db.session.commit()
-            print("✅ Dashboard data seeded!")
+            print("✅ Dashboard data (40 entries) seeded!")
+        else:
+            print("❌ ERROR: 'salesperson' user not found. Cannot seed data.")
 # =======================================================
 # --- LOAD ML MODEL AT STARTUP ---
 ml_model = None
