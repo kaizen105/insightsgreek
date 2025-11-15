@@ -1,31 +1,31 @@
 let myLeadScoreChart;
 let myTrendChart;
 let mySentimentChart;
-// Helper to get token/user from either storage (matches other pages)
+
+// Helper to get token/user from either storage
 function getToken() { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
 function getUser() { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')); }
+
 /**
- * This is the missing function.
- * It automatically adds your token and logs you out
+ * This function automatically adds your token and logs you out
  * if the token is bad.
  */
 async function secureFetch(url, options = {}) {
     const token = getToken();
-    // Set up default headers
     const defaultHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
     };
-    // Merge our default headers with any custom headers
     options.headers = { ...defaultHeaders, ...options.headers };
     const response = await fetch(url, options);
-    // This part handles expired tokens
+
     if (response.status === 401) {
-        logout(); // Call your existing logout function
+        logout(); 
         throw new Error('Unauthorized');
     }
     return response;
 }
+
 // Load dashboard on page load
 window.addEventListener('DOMContentLoaded', async () => {
     const user = getUser();
@@ -33,26 +33,23 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.location.href = '/login';
         return;
     }
-   
+    
     document.getElementById('username').textContent = user.username;
     await loadDashboardData();
-    setInterval(loadDashboardData, 30000);
+    // Keep-alive and auto-refresh
+    setInterval(loadDashboardData, 30000); 
 });
+
 // Load all dashboard data
 async function loadDashboardData() {
     try {
-        const response = await secureFetch('/api/dashboard', {
-        });
-        
-        if (response.status === 401) {
-             logout();
-             return;
-        }
+        const response = await secureFetch('/api/dashboard');
         const data = await response.json();
         
         if (response.ok) {
+            // These are the only functions we call now
             updateStats(data.stats);
-            generateLeadScoreChart(data.stats.leads); // NEW: ML Score Chart
+            generateLeadScoreChart(data.stats.leads);
             generateTrendChart(data.trends);
             generateWordCloud(data.wordcloud_data);
             displayRecentFeedbacks(data.recent);
@@ -62,42 +59,34 @@ async function loadDashboardData() {
         console.error('Error loading dashboard:', error);
     }
 }
+
 // Update statistics text
 function updateStats(stats) {
     document.getElementById('totalFeedbacks').textContent = stats.total || 0;
     document.getElementById('weekFeedbacks').textContent = stats.week || 0;
     document.getElementById('activeSales').textContent = stats.active_sales || 0;
 }
-// 1. NEW: AI Lead Score Chart (Doughnut) - Added animation
+
+// 1. AI Lead Score Chart
 function generateLeadScoreChart(leads) {
     const ctx = document.getElementById('leadScoreChart').getContext('2d');
-   
-    // 1. DESTROY THE OLD CHART if it exists
     if (myLeadScoreChart) {
         myLeadScoreChart.destroy();
     }
-    // 2. CREATE THE NEW CHART and store it
     myLeadScoreChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['High Quality', 'Medium Quality', 'Low Quality'],
             datasets: [{
                 data: [leads.high, leads.medium, leads.low],
-                backgroundColor: [
-                    '#059669', // Green
-                    '#d97706', // Amber
-                    '#dc2626'  // Red
-                ],
+                backgroundColor: ['#059669', '#d97706', '#dc2626'],
                 borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {  // NEW: Subtle draw-in
-                duration: 1000,
-                easing: 'easeOutQuart'
-            },
+            animation: { duration: 1000, easing: 'easeOutQuart' },
             plugins: {
                 legend: { position: 'bottom' },
                 title: { display: true, text: 'AI Lead Quality Distribution' }
@@ -105,14 +94,13 @@ function generateLeadScoreChart(leads) {
         }
     });
 }
-// 2. Trend Chart (Line) - Added animation + Y-label
+
+// 2. Trend Chart (Line)
 function generateTrendChart(trends) {
     const ctx = document.getElementById('trendChart').getContext('2d');
-    // 1. DESTROY THE OLD CHART if it exists
     if (myTrendChart) {
         myTrendChart.destroy();
     }
-    // 2. CREATE THE NEW CHART and store it
     myTrendChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -129,106 +117,77 @@ function generateTrendChart(trends) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {  // NEW: Line draw anim
-                duration: 1000,
-                easing: 'easeOutQuart'
-            },
+            animation: { duration: 1000, easing: 'easeOutQuart' },
             plugins: { 
                 legend: { display: false },
-                title: { 
-                    display: true, 
-                    text: 'Feedback Trends (7 Days)' 
-                }
+                title: { display: true, text: 'Feedback Trends (7 Days)' }
             },
             scales: { 
                 y: { 
                     beginAtZero: true, 
                     ticks: { precision: 0 },
-                    title: {  // NEW: Y-axis label
-                        display: true,
-                        text: 'Feedback Count'
-                    }
+                    title: { display: true, text: 'Feedback Count' }
                 },
                 x: {
-                    title: {  // NEW: X-axis label for completeness
-                        display: true,
-                        text: 'Date (MM/DD)'
-                    }
+                    title: { display: true, text: 'Date (MM/DD)' }
                 }
             }
         }
     });
 }
-// 3. Word Cloud (Enhanced: Larger, Sharp, Purple, No Overlaps)
+
+// 3. Word Cloud (Fixed)
 function generateWordCloud(wordData) {
     const canvas = document.getElementById('wordcloud');
-    const container = document.getElementById('wordcloud-container'); // Wrapper ref
-    if (!container) return; // Safety
-   
-    // 1. Get DPR
+    const container = document.getElementById('wordcloud-container');
+    if (!container) return; 
+    
     const dpr = window.devicePixelRatio || 1;
-   
-    // 2. Display size from CSS
-    const width = 400;  // Matches CSS
-    const height = 300;
-    // 3. High-res internal
-    canvas.width = width * dpr * 1.5;  // Boosted for extra sharpness
+    const width = 400;  // Fixed width from Aims
+    const height = 300; // Fixed height from Aims
+    
+    canvas.width = width * dpr * 1.5;
     canvas.height = height * dpr * 1.5;
-    // 4. CSS scale down
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
-    // 5. Generate with fixes: Larger grid, tuned weights, purple colors, spiral layout
+
     WordCloud(canvas, {
         list: wordData,
-        gridSize: Math.round(16 * dpr),  // NEW: Larger grid = less overlap, bigger words
-        weightFactor: (size) => size * 8 * dpr,  // NEW: Simpler, larger scaling (min ~18px, max ~48px)
+        gridSize: Math.round(16 * dpr),
+        weightFactor: (size) => size * 8 * dpr,
         fontFamily: 'Segoe UI, sans-serif',
-        color: () => {  // NEW: Purple theme only (no random)
-            const shades = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDA0DD', '#E879F9']; // Purple palette
+        color: () => {
+            const shades = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDA0DD', '#E879F9'];
             return shades[Math.floor(Math.random() * shades.length)];
         },
-        rotateRatio: 0.2,  // NEW: Slight rotation for variety, but not chaotic
+        rotateRatio: 0.2,
         backgroundColor: 'transparent',
-        drawMask: false,
-        shape: 'rectangular'  // NEW: Better bounds than default circle (reduces edge squeeze)
+        shape: 'rectangular'
     });
-    // 6. Trigger fade-in after draw (JS fallback if CSS misses)
+
     setTimeout(() => { container.style.opacity = '1'; }, 100);
 }
-// 4. NEW: Sentiment Chart (Pie) - Added animation
+
+// 4. Sentiment Chart (Pie)
 function generateSentimentChart(sentiment) {
     const ctx = document.getElementById('sentimentChart').getContext('2d');
-   
-    // Destroy the old chart if it exists
     if (mySentimentChart) {
         mySentimentChart.destroy();
     }
-    // Create the new chart
     mySentimentChart = new Chart(ctx, {
-        type: 'pie', // Pie or Doughnut works well
+        type: 'pie',
         data: {
             labels: ['Positive', 'Neutral', 'Negative'],
             datasets: [{
-                data: [
-                    sentiment.positive,
-                    sentiment.neutral,
-                    sentiment.negative
-                ],
-                backgroundColor: [
-                    '#059669', // Positive (Green)
-                    '#6b7280', // Neutral (Gray)
-                    '#dc2626'  // Negative (Red)
-                ],
+                data: [sentiment.positive, sentiment.neutral, sentiment.negative],
+                backgroundColor: ['#059669', '#6b7280', '#dc2626'],
                 borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {  // NEW: Subtle draw-in
-                duration: 1000,
-                easing: 'easeOutQuart'
-            },
+            animation: { duration: 1000, easing: 'easeOutQuart' },
             plugins: {
                 legend: { position: 'bottom' },
                 title: { display: true, text: 'Customer Feedback Sentiment' }
@@ -236,18 +195,22 @@ function generateSentimentChart(sentiment) {
         }
     });
 }
-// Display recent list
+
+// 5. Display recent list
 function displayRecentFeedbacks(feedbacks) {
     const list = document.getElementById('feedbackList');
-    list.innerHTML = '';
+    list.innerHTML = ''; // Clear old list
     feedbacks.forEach(f => {
         const div = document.createElement('div');
         div.className = 'feedback-item';
-        // Show ML score if available
-        const scoreBadge = f.lead_label ?
-            `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.lead_label === 'High' ? '#dcfce7; color:#166534' : '#f3f4f6; color:#374151'}">${f.lead_label} (${(f.lead_score*100).toFixed(0)}%)</span>`
-            : '';
-          
+        
+        let scoreBadge = ''; // Default empty
+        if (f.lead_label) { // It's a Lead
+             scoreBadge = `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.lead_label === 'High' ? '#dcfce7; color:#166534' : '#f3f4f6; color:#374151'}">${f.lead_label} (${(f.lead_score*100).toFixed(0)}%)</span>`;
+        } else if (f.sentiment_label) { // It's Feedback
+            scoreBadge = `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.sentiment_label === 'Positive' ? '#dcfce7; color:#166534' : (f.sentiment_label === 'Negative' ? '#fee2e2; color:#991b1b' : '#f3f4f6; color:#374151')}">${f.sentiment_label}</span>`;
+        }
+            
         div.innerHTML = `
             <div class="feedback-header">
                 <strong>${f.salesperson}</strong>
@@ -259,11 +222,11 @@ function displayRecentFeedbacks(feedbacks) {
         list.appendChild(div);
     });
 }
-// Download CSV Report
+
+// 6. Download CSV Report
 async function downloadReport() {
     try {
-        const response = await secureFetch('/api/download-report', {
-        });
+        const response = await secureFetch('/api/download-report');
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -278,6 +241,8 @@ async function downloadReport() {
         alert("Failed to download report.");
     }
 }
+
+// 7. Logout
 function logout() {
     localStorage.clear();
     sessionStorage.clear();

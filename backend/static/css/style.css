@@ -799,6 +799,8 @@ textarea {
 }
 
 /* ========== MANAGER DASHBOARD ========== */
+
+/* --- 1. Top Stat Cards --- */
 .stats-overview {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -813,8 +815,15 @@ textarea {
     box-shadow: 0 5px 25px rgba(0,0,0,0.1);
     text-align: center;
     transition: all 0.3s ease;
+    /* Animation from Aim 3 */
     animation: fadeInUp 0.5s ease-out both;
+    opacity: 0; /* Start hidden for animation */
 }
+
+/* Stagger stat card animations */
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
 
 .stat-card:hover {
     transform: translateY(-10px) scale(1.02);
@@ -836,80 +845,67 @@ textarea {
     animation: countUp 1s ease-out;
 }
 
-@keyframes countUp {
-    from {
-        opacity: 0;
-        transform: scale(0.5);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* Dashboard Section - Base Style */
+/* --- 2. Dashboard Section (The "White Box") --- */
 .dashboard-section {
     background: white;
-    padding: 40px;
+    padding: 30px;
     border-radius: 15px;
     box-shadow: 0 5px 25px rgba(0,0,0,0.1);
     margin-bottom: 30px;
     animation: fadeInUp 0.6s ease-out both;
-    min-height: 600px;
+    
+    /* THIS IS THE FIX for misaligned Chart.js titles */
+    position: relative; 
 }
 
 .dashboard-section h3 {
     color: #667eea;
-    margin-bottom: 30px;
-    font-size: 1.8rem;
+    margin-bottom: 25px;
+    font-size: 1.5rem;
     font-weight: 700;
 }
 
-/* Word Cloud - PROPERLY FIXED */
+/* --- 3. Word Cloud Fix (Aims 1, 2, 4) --- */
+/* This is the container from your HTML */
+.wordcloud-wrapper {
+    position: relative;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    
+    /* Center the fixed-size canvas */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* Crisp rendering */
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    shape-rendering: geometricPrecision;
+
+    /* Animation from Aim 3 */
+    opacity: 0;
+    animation: fadeIn 0.8s 0.4s ease-out forwards;
+}
+
+/* This styles the canvas from your JS */
 #wordcloud {
-    width: 100% !important;
-    height: 500px !important;
-    min-height: 500px !important;
-    background: #f8f9fa;
-    border-radius: 10px;
-    display: block !important;
-    margin: 0 auto !important;
+    width: 400px !important;  /* Fixed width from Aim 4 */
+    height: 300px !important; /* Fixed height from Aim 4 */
 }
 
-/* Chart Container - PROPERLY FIXED FOR OVERLAP */
-.chart-container {
-    background: white;
-    padding: 40px;
-    border-radius: 15px;
-    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
-    margin-bottom: 30px !important;
-    margin-top: 30px !important;
-    clear: both !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    width: 100% !important;
-    min-height: 500px;
-}
-
-.chart-container h3 {
-    color: #667eea;
-    margin-bottom: 30px;
-    font-size: 1.8rem;
-    font-weight: 700;
-    text-align: center;
-    width: 100%;
-}
-
-/* Sentiment Chart - PROPERLY CENTERED */
+/* --- 4. Chart.js Canvases --- */
+/* Your HTML has inline styles for these, which is fine. */
+/* This CSS is a fallback. */
+#leadScoreChart,
+#trendChart,
 #sentimentChart {
-    width: 600px !important;
-    height: 400px !important;
-    display: block !important;
-    margin: 0 auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 300px; /* Matches your HTML inline style */
 }
 
-/* Feedback List */
+/* --- 5. Feedback List --- */
 .feedback-list {
     max-height: 500px;
     overflow-y: auto;
@@ -955,6 +951,46 @@ textarea {
     font-size: 14px;
 }
 
+/* --- 6. Button Animations (Aim 3) --- */
+.btn-primary, .btn-secondary {
+    transition: all 0.2s ease-in-out;
+}
+.btn-primary:hover {
+    transform: scale(1.05);
+    background-color: #5a3e9a; /* Darker purple */
+}
+.btn-secondary:hover {
+    transform: scale(1.05);
+    background-color: #d1d5db; /* Darker gray */
+}
+
+/* --- 7. Animations (Aims & Base) --- */
+@keyframes countUp {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* This is the new animation from Aim 3 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 /* ========== DEVELOPER PANEL ========== */
 .admin-tabs {
     display: flex;
