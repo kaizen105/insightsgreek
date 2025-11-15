@@ -144,7 +144,7 @@ async function deleteProduct(productId) {
 
 async function loadUsers() {
     try {
-        const response = await SecureFetch('/api/users', {
+        const response = await secureFetch('/api/users', {
         });
         const data = await response.json();
         displayUsers(data.users);
@@ -230,7 +230,7 @@ async function addUser() {
     }
     
     try {
-        const response = await SecureFetch('/api/users', {
+        const response = await secureFetch('/api/users', {
             method: 'POST',
             body: JSON.stringify({ username, password, role })
         });
@@ -254,7 +254,7 @@ async function deleteUser(userId) {
     }
     
     try {
-        const response = await SecureFetch(`/api/users/${userId}`, {
+        const response = await secureFetch(`/api/users/${userId}`, {
             method: 'DELETE',
         });
         
@@ -273,7 +273,7 @@ async function deleteUser(userId) {
 
 async function loadLogs() {
     try {
-        const response = await SecureFetch('/api/logs', {
+        const response = await secureFetch('/api/logs', {
         });      
         const data = await response.json();
         displayLogs(data.logs);
