@@ -1,7 +1,6 @@
 let myLeadScoreChart;
 let myTrendChart;
 let mySentimentChart;
-
 // Helper to get token/user from either storage (matches other pages)
 function getToken() { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
 function getUser() { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')); }
@@ -12,24 +11,19 @@ function getUser() { return JSON.parse(localStorage.getItem('user') || sessionSt
  */
 async function secureFetch(url, options = {}) {
     const token = getToken();
-
     // Set up default headers
     const defaultHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
     };
-
     // Merge our default headers with any custom headers
     options.headers = { ...defaultHeaders, ...options.headers };
-
     const response = await fetch(url, options);
-
     // This part handles expired tokens
     if (response.status === 401) {
         logout(); // Call your existing logout function
         throw new Error('Unauthorized');
     }
-
     return response;
 }
 // Load dashboard on page load
@@ -39,12 +33,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.location.href = '/login';
         return;
     }
-    
+   
     document.getElementById('username').textContent = user.username;
     await loadDashboardData();
     setInterval(loadDashboardData, 30000);
 });
-
 // Load all dashboard data
 async function loadDashboardData() {
     try {
@@ -52,10 +45,9 @@ async function loadDashboardData() {
         });
         
         if (response.status === 401) {
-             logout(); 
+             logout();
              return;
         }
-
         const data = await response.json();
         
         if (response.ok) {
@@ -70,23 +62,20 @@ async function loadDashboardData() {
         console.error('Error loading dashboard:', error);
     }
 }
-
 // Update statistics text
 function updateStats(stats) {
     document.getElementById('totalFeedbacks').textContent = stats.total || 0;
     document.getElementById('weekFeedbacks').textContent = stats.week || 0;
     document.getElementById('activeSales').textContent = stats.active_sales || 0;
 }
-
-// 1. NEW: AI Lead Score Chart (Doughnut)
+// 1. NEW: AI Lead Score Chart (Doughnut) - Added animation
 function generateLeadScoreChart(leads) {
     const ctx = document.getElementById('leadScoreChart').getContext('2d');
-    
+   
     // 1. DESTROY THE OLD CHART if it exists
     if (myLeadScoreChart) {
         myLeadScoreChart.destroy();
     }
-
     // 2. CREATE THE NEW CHART and store it
     myLeadScoreChart = new Chart(ctx, {
         type: 'doughnut',
@@ -105,6 +94,10 @@ function generateLeadScoreChart(leads) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {  // NEW: Subtle draw-in
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
             plugins: {
                 legend: { position: 'bottom' },
                 title: { display: true, text: 'AI Lead Quality Distribution' }
@@ -112,16 +105,13 @@ function generateLeadScoreChart(leads) {
         }
     });
 }
-
-// 2. Trend Chart (Line)
+// 2. Trend Chart (Line) - Added animation + Y-label
 function generateTrendChart(trends) {
     const ctx = document.getElementById('trendChart').getContext('2d');
-
     // 1. DESTROY THE OLD CHART if it exists
     if (myTrendChart) {
         myTrendChart.destroy();
     }
-
     // 2. CREATE THE NEW CHART and store it
     myTrendChart = new Chart(ctx, {
         type: 'line',
@@ -139,52 +129,80 @@ function generateTrendChart(trends) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            animation: {  // NEW: Line draw anim
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
+            plugins: { 
+                legend: { display: false },
+                title: { 
+                    display: true, 
+                    text: 'Feedback Trends (7 Days)' 
+                }
+            },
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { precision: 0 },
+                    title: {  // NEW: Y-axis label
+                        display: true,
+                        text: 'Feedback Count'
+                    }
+                },
+                x: {
+                    title: {  // NEW: X-axis label for completeness
+                        display: true,
+                        text: 'Date (MM/DD)'
+                    }
+                }
+            }
         }
     });
 }
-
-// 3. Word Cloud (High-DPI / Retina Sharpness Fix)
+// 3. Word Cloud (Enhanced: Larger, Sharp, Purple, No Overlaps)
 function generateWordCloud(wordData) {
     const canvas = document.getElementById('wordcloud');
-    const container = canvas.parentElement;
-    
-    // 1. Get the device pixel ratio (e.g., 2 for retina screens)
+    const container = document.getElementById('wordcloud-container'); // Wrapper ref
+    if (!container) return; // Safety
+   
+    // 1. Get DPR
     const dpr = window.devicePixelRatio || 1;
-    
-    // 2. Get the display size we want
-    const width = container.offsetWidth;
-    const height = 500; // Matches your CSS height
-
-    // 3. Set the actual internal resolution higher based on DPR
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-
-    // 4. Force CSS to keep it the original display size
+   
+    // 2. Display size from CSS
+    const width = 400;  // Matches CSS
+    const height = 300;
+    // 3. High-res internal
+    canvas.width = width * dpr * 1.5;  // Boosted for extra sharpness
+    canvas.height = height * dpr * 1.5;
+    // 4. CSS scale down
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
-
-    // 5. Draw, scaling up the font size by DPR so it doesn't look tiny
+    // 5. Generate with fixes: Larger grid, tuned weights, purple colors, spiral layout
     WordCloud(canvas, {
         list: wordData,
-        gridSize: Math.round(8 * dpr),
-        weightFactor: (size) => Math.pow(size, 2.3) * (canvas.width / 1000) * dpr * 0.8, // Tuned scaling
+        gridSize: Math.round(16 * dpr),  // NEW: Larger grid = less overlap, bigger words
+        weightFactor: (size) => size * 8 * dpr,  // NEW: Simpler, larger scaling (min ~18px, max ~48px)
         fontFamily: 'Segoe UI, sans-serif',
-        color: 'random-dark',
-        rotateRatio: 0,
-        backgroundColor: 'transparent'
+        color: () => {  // NEW: Purple theme only (no random)
+            const shades = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDA0DD', '#E879F9']; // Purple palette
+            return shades[Math.floor(Math.random() * shades.length)];
+        },
+        rotateRatio: 0.2,  // NEW: Slight rotation for variety, but not chaotic
+        backgroundColor: 'transparent',
+        drawMask: false,
+        shape: 'rectangular'  // NEW: Better bounds than default circle (reduces edge squeeze)
     });
+    // 6. Trigger fade-in after draw (JS fallback if CSS misses)
+    setTimeout(() => { container.style.opacity = '1'; }, 100);
 }
-// 4. NEW: Sentiment Chart (Pie)
+// 4. NEW: Sentiment Chart (Pie) - Added animation
 function generateSentimentChart(sentiment) {
     const ctx = document.getElementById('sentimentChart').getContext('2d');
-    
+   
     // Destroy the old chart if it exists
     if (mySentimentChart) {
         mySentimentChart.destroy();
     }
-
     // Create the new chart
     mySentimentChart = new Chart(ctx, {
         type: 'pie', // Pie or Doughnut works well
@@ -192,8 +210,8 @@ function generateSentimentChart(sentiment) {
             labels: ['Positive', 'Neutral', 'Negative'],
             datasets: [{
                 data: [
-                    sentiment.positive, 
-                    sentiment.neutral, 
+                    sentiment.positive,
+                    sentiment.neutral,
                     sentiment.negative
                 ],
                 backgroundColor: [
@@ -207,6 +225,10 @@ function generateSentimentChart(sentiment) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {  // NEW: Subtle draw-in
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
             plugins: {
                 legend: { position: 'bottom' },
                 title: { display: true, text: 'Customer Feedback Sentiment' }
@@ -222,10 +244,10 @@ function displayRecentFeedbacks(feedbacks) {
         const div = document.createElement('div');
         div.className = 'feedback-item';
         // Show ML score if available
-        const scoreBadge = f.lead_label ? 
-            `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.lead_label === 'High' ? '#dcfce7; color:#166534' : '#f3f4f6; color:#374151'}">${f.lead_label} (${(f.lead_score*100).toFixed(0)}%)</span>` 
+        const scoreBadge = f.lead_label ?
+            `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.lead_label === 'High' ? '#dcfce7; color:#166534' : '#f3f4f6; color:#374151'}">${f.lead_label} (${(f.lead_score*100).toFixed(0)}%)</span>`
             : '';
-            
+          
         div.innerHTML = `
             <div class="feedback-header">
                 <strong>${f.salesperson}</strong>
@@ -237,7 +259,6 @@ function displayRecentFeedbacks(feedbacks) {
         list.appendChild(div);
     });
 }
-
 // Download CSV Report
 async function downloadReport() {
     try {
@@ -257,7 +278,6 @@ async function downloadReport() {
         alert("Failed to download report.");
     }
 }
-
 function logout() {
     localStorage.clear();
     sessionStorage.clear();

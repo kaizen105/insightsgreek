@@ -19,7 +19,6 @@
             <button onclick="logout()" class="btn-secondary" style="padding: 8px 15px; font-size: 14px;">Logout</button>
         </div>
     </div>
-
     <div class="container">
         <!-- 1. TOP STATS -->
         <div class="stats-overview">
@@ -36,7 +35,6 @@
                 <p id="activeSales">0</p>
             </div>
         </div>
-
         <!-- 2. NEW AI CHARTS ROW (Flexbox for side-by-side on large screens) -->
         <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 30px;">
             <!-- AI Lead Score (Pie Chart) -->
@@ -54,13 +52,13 @@
                 </div>
             </div>
         </div>
-
-        <!-- 3. WORD CLOUD -->
+        <!-- 3. WORD CLOUD (Updated with Wrapper for Sizing/Anim) -->
         <div class="dashboard-section">
             <h3>High-Value Keywords</h3>
-            <canvas id="wordcloud"></canvas>
+            <div id="wordcloud-container" class="wordcloud-wrapper">
+                <canvas id="wordcloud"></canvas>
+            </div>
         </div>
-
         <div class="chart-container">
             <h3>Customer Sentiment</h3>
             <canvas id="sentimentChart"></canvas>
@@ -71,9 +69,9 @@
             <div id="feedbackList" class="feedback-list">
                 <!-- Loaded by JS -->
                 <p style="color: #999;">Loading recent feedback...</p>
+            </div>
         </div>
     </div>
-
     <script src="{{ url_for('static', filename='js/manager.js') }}"></script>
 </body>
 </html>
