@@ -142,35 +142,87 @@ function generateTrendChart(trends) {
     });
 }
 
-// 3. Word Cloud (High-DPI / Retina Sharpness Fix)
+// 3. Word Cloud (OPTIMIZED & FIXED)
 function generateWordCloud(wordData) {
     const canvas = document.getElementById('wordcloud');
     const container = canvas.parentElement;
     
-    // 1. Get the device pixel ratio (e.g., 2 for retina screens)
+    // Handle empty data
+    if (!wordData || wordData.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '16px Segoe UI';
+        ctx.fillStyle = '#999';
+        ctx.textAlign = 'center';
+        ctx.fillText('No keyword data available', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+    
+    // Get device pixel ratio for sharp rendering on retina displays
     const dpr = window.devicePixelRatio || 1;
     
-    // 2. Get the display size we want
-    const width = container.offsetWidth;
-    const height = 400; // Matches your CSS height
+    // Get actual display dimensions
+    const displayWidth = container.offsetWidth;
+    const displayHeight = 400;
 
-    // 3. Set the actual internal resolution higher based on DPR
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    // Set internal canvas resolution (scaled up for sharpness)
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
 
-    // 4. Force CSS to keep it the original display size
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    // Set CSS size to match display dimensions
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
 
-    // 5. Draw, scaling up the font size by DPR so it doesn't look tiny
+    // Clear previous rendering
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Sort and limit words for better display
+    const sortedWords = [...wordData].sort((a, b) => b[1] - a[1]).slice(0, 50);
+    
+    // Find max weight for normalization
+    const maxWeight = Math.max(...sortedWords.map(w => w[1]));
+    
+    // Generate word cloud with optimized settings
     WordCloud(canvas, {
-        list: wordData,
-        gridSize: Math.round(8 * dpr),
-        weightFactor: (size) => Math.pow(size, 2.3) * (canvas.width / 1000) * dpr * 0.8, // Tuned scaling
-        fontFamily: 'Segoe UI, sans-serif',
-        color: 'random-dark',
-        rotateRatio: 0,
-        backgroundColor: 'transparent'
+        list: sortedWords,
+        gridSize: Math.round(12 * dpr),
+        weightFactor: function(size) {
+            // Normalize and scale appropriately
+            const normalized = size / maxWeight;
+            const baseSize = displayWidth / 25; // Responsive base size
+            return normalized * baseSize * dpr;
+        },
+        fontFamily: 'Segoe UI, Tahoma, sans-serif',
+        fontWeight: '600',
+        color: function() {
+            // Vibrant color palette matching your theme
+            const colors = [
+                '#667eea', // Primary purple
+                '#764ba2', // Deep purple
+                '#f093fb', // Pink
+                '#4facfe', // Blue
+                '#43e97b', // Green
+                '#fa709a', // Rose
+                '#feca57', // Yellow
+                '#48dbfb'  // Cyan
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        },
+        rotateRatio: 0.5,
+        minRotation: -Math.PI / 4,
+        maxRotation: Math.PI / 4,
+        rotationSteps: 2,
+        backgroundColor: 'transparent',
+        drawOutOfBound: false,
+        shrinkToFit: true,
+        minSize: 10 * dpr,
+        shuffle: true,
+        wait: 0,
+        abortThreshold: 0,
+        abort: function() {
+            return false;
+        }
     });
 }
 // Display recent list
