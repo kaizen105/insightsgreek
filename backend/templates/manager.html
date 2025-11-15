@@ -21,7 +21,6 @@
     </div>
 
     <div class="container">
-        <!-- 1. TOP STATS -->
         <div class="stats-overview">
             <div class="stat-card">
                 <h4>Total Feedbacks</h4>
@@ -37,36 +36,35 @@
             </div>
         </div>
 
-        <!-- 2. NEW AI CHARTS ROW (Flexbox for side-by-side on large screens) -->
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 30px;">
-            <!-- AI Lead Score (Pie Chart) -->
-            <div class="dashboard-section" style="flex: 1; min-width: 300px; margin-bottom: 0;">
+        <div class="charts-row">
+            <div class="dashboard-card">
                 <h3>AI Lead Scores</h3>
-                <div style="height: 300px; position: relative;">
-                    <canvas id="leadScoreChart"></canvas>
-                </div>
+                <canvas id="leadScoreChart" class="chart-canvas"></canvas>
             </div>
-            <!-- Trends (Line Chart) -->
-            <div class="dashboard-section" style="flex: 2; min-width: 400px; margin-bottom: 0;">
-                <h3>Feedback Trends (7 Days)</h3>
-                <div style="height: 300px; position: relative;">
-                    <canvas id="trendChart"></canvas>
-                </div>
+            <div class="dashboard-card">
+                <h3>Customer Sentiment</h3>
+                <canvas id="sentimentChart" class="chart-canvas"></canvas>
             </div>
         </div>
 
-        <!-- 3. WORD CLOUD -->
-        <div class="dashboard-section">
+        <div class="dashboard-card">
+            <h3>Feedback Trends (7 Days)</h3>
+            <canvas id="trendChart" class="chart-canvas-large"></canvas>
+        </div>
+
+        <div class="dashboard-card">
             <h3>High-Value Keywords</h3>
-            <canvas id="wordcloud"></canvas>
+            <canvas id="wordcloud" class="chart-canvas-large"></canvas>
         </div>
 
-        <div class="dashboard-card"> <h3>High-Value Keywords</h3>
-            <canvas id="wordcloud" class="chart-canvas"></canvas> </div>
+        <div class="dashboard-card">
+            <h3>Recent Activity</h3>
+            <div id="feedbackList" class="feedback-list">
+                <p style="color: #999;">Loading recent feedback...</p>
+            </div>
+        </div>
 
-        <div class="dashboard-card"> <h3>Customer Sentiment</h3>
-            <canvas id="sentimentChart" class="chart-canvas"></canvas> </div>
-
-    <script src="{{ url_for('static', filename='js/manager.js') }}"></script>
+    </div> <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/manager.js') }}" defer></script>
 </body>
 </html>

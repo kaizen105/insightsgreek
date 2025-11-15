@@ -151,7 +151,7 @@ function generateWordCloud(wordData) {
     
     const dpr = window.devicePixelRatio || 1;
     const width = container.offsetWidth;
-    const height = 500;
+    const height = container.clientHeight; // <-- NEW
     
     canvas.width = width * dpr;
     canvas.height = height * dpr;
