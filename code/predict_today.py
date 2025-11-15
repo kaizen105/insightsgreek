@@ -17,14 +17,7 @@ def load_model(path=None):
 def predict_probability(model, text):
     if model is None:
         raise RuntimeError("Model not loaded")
-    try:
-        prob = model.predict_proba([text])[0][1]
-        return float(prob)
-    except Exception:
-        try:
-            score = model.decision_function([text])[0]
-            import math
-            prob = 1 / (1 + math.exp(-score))
-            return float(prob)
-        except Exception:
-            raise
+
+    # This will now fail LOUDLY and show us the real error
+    prob = model.predict_proba([text])[0][1]
+    return float(prob)
