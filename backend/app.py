@@ -19,7 +19,20 @@ import os
 # This is the directory our build script downloads to
 NLTK_DATA_DIR = '/opt/render/nltk_data'
 
-# Check if the path exists (it should after the build)
+# (Find the old NLTK fix you added and replace it with this)
+
+# ========== NLTK RUNTIME PATH FIX ==========
+import nltk
+import os
+
+# Get the path to the 'backend' folder
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+# Get the path to the project root (one level up)
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+# Define the path to our new data folder
+NLTK_DATA_DIR = os.path.join(PROJECT_ROOT, 'nltk_data')
+
+# Check if the path exists
 if os.path.exists(NLTK_DATA_DIR):
     # Force NLTK to add this path to its search list
     nltk.data.path.append(NLTK_DATA_DIR)
@@ -27,13 +40,6 @@ if os.path.exists(NLTK_DATA_DIR):
 else:
     print(f"❌ FATAL: NLTK data directory NOT FOUND at: {NLTK_DATA_DIR}")
 # ============================================
-# --- IMPORT DATABASE MODELS ---
-try:
-    from models import db, User, Feedback, Product, ActivityLog
-    print("✅ SUCCESS: Found models.py")
-except ImportError as e:
-    print(f"❌ FATAL: Could not import models.py: {e}")
-    raise e
 
 # --- ROBUST GEMINI (CHATBOT) SETUP ---
 import google.generativeai as genai

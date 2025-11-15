@@ -3,17 +3,19 @@ import textblob.download_corpora
 import sys
 import os
 
-# Set the download directory explicitly to the one Render uses
-download_dir = '/opt/render/nltk_data'
-if not os.path.exists(download_dir):
-    os.makedirs(download_dir)
+# Get the directory where this script is located (the project root)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Define the download directory as a folder named 'nltk_data' in the root
+DOWNLOAD_DIR = os.path.join(BASE_DIR, 'nltk_data')
 
-# Add this path to NLTK's search list
-nltk.data.path.append(download_dir)
+# Create the directory if it doesn't exist
+if not os.path.exists(DOWNLOAD_DIR):
+    os.makedirs(DOWNLOAD_DIR)
 
-print(f"--- Setting NLTK data path to: {download_dir} ---")
+print(f"--- NLTK data will be downloaded to: {DOWNLOAD_DIR} ---")
+nltk.data.path.append(DOWNLOAD_DIR)
 
-# Download TextBlob
+# --- Download TextBlob ---
 print("--- Starting TextBlob Downloader ---")
 try:
     textblob.download_corpora.main()
@@ -21,10 +23,10 @@ try:
 except Exception as e:
     print(f"!!! ERROR downloading TextBlob: {e}")
 
-# Download NLTK packages
+# --- Download NLTK Packages ---
 print("--- Starting NLTK Downloader ---")
 nltk_packages = [
-    'punkt_tab',  # The one that is failing
+    'punkt_tab',
     'stopwords',
     'punkt',
     'averaged_perceptron_tagger',
@@ -35,13 +37,12 @@ nltk_packages = [
 for pkg in nltk_packages:
     try:
         print(f"Downloading NLTK package: {pkg}...")
-        # Download to the specific directory
-        nltk.download(pkg, download_dir=download_dir)
-        print(f"Successfully downloaded {pkg} to {download_dir}")
+        nltk.download(pkg, download_dir=DOWNLOAD_DIR)
+        print(f"Successfully downloaded {pkg}")
     except Exception as e:
         print(f"!!! ERROR downloading {pkg}: {e}")
         if pkg == 'punkt_tab':
              print("!!! CRITICAL FAILURE: Could not download punkt_tab.")
              pass
 
-print("--- NLTK Download Complete ---")
+print("--- All downloads complete ---")
