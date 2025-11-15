@@ -12,13 +12,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('username').textContent = user.username;
     await loadDashboardData();
+    setInterval(loadDashboardData, 30000);
 });
 
 // Load all dashboard data
 async function loadDashboardData() {
     try {
-        const response = await fetch('/api/dashboard', {
-            headers: { 'Authorization': `Bearer ${getToken()}` }
+        const response = await secureFetch('/api/dashboard', {
         });
         
         if (response.status === 401) {
@@ -158,8 +158,7 @@ function displayRecentFeedbacks(feedbacks) {
 // Download CSV Report
 async function downloadReport() {
     try {
-        const response = await fetch('/api/download-report', {
-            headers: { 'Authorization': `Bearer ${getToken()}` }
+        const response = await secureFetch('/api/download-report', {
         });
         if (response.ok) {
             const blob = await response.blob();

@@ -1,10 +1,16 @@
 let currentTab = 'products';
 
+// Helper to get token/user from either storage
+function getToken() { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
+function getUser() { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')); }
+
 // Load page on DOM load
 window.addEventListener('DOMContentLoaded', async () => {
-    const user = JSON.parse(sessionStorage.getItem('user'));
-    if (!user) {
-        window.location.href = '/';
+    const user = getUser(); // <-- USE HELPER
+    
+    // Check for user AND correct role
+    if (!user || user.role !== 'dev') {
+        logout(); // <-- Use your logout function
         return;
     }
     
@@ -12,6 +18,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadProducts();
     await loadUsers();
     await loadLogs();
+
+    // === FIX FOR PROBLEM 3 (Numbness) ===
+    // Keep the server awake by refreshing logs every 60 seconds
+    setInterval(loadLogs, 60000); 
 });
 
 // Tab switching
@@ -37,12 +47,7 @@ function showTab(tabName) {
 
 async function loadProducts() {
     try {
-        const response = await fetch('/api/products', {
-            headers: {
-                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            }
-        });
-        
+        const response = await secureFetch('/api/products');
         const data = await response.json();
         displayProducts(data.products);
     } catch (error) {
@@ -98,12 +103,8 @@ async function addProduct() {
     }
     
     try {
-        const response = await fetch('/api/products', {
+        const response = await secureFetch('/api/products', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            },
             body: JSON.stringify({ name, description, details })
         });
         
@@ -125,13 +126,9 @@ async function deleteProduct(productId) {
     }
     
     try {
-        const response = await fetch(`/api/products/${productId}`, {
+        const response = await secureFetch(`/api/products/${productId}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            }
-        });
-        
+        });  
         if (response.ok) {
             await loadProducts();
         } else {
@@ -147,19 +144,44 @@ async function deleteProduct(productId) {
 
 async function loadUsers() {
     try {
-        const response = await fetch('/api/users', {
-            headers: {
-                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            }
+        const response = await SecureFetch('/api/users', {
         });
-        
         const data = await response.json();
         displayUsers(data.users);
     } catch (error) {
         console.error('Error loading users:', error);
     }
 }
+/**
+ * This new "secureFetch" function will replace all your 
+ * 'fetch' calls. It automatically adds the token and
+ * logs the user out if the token is bad.
+ */
+async function secureFetch(url, options = {}) {
+    const token = getToken();
 
+    // 1. Set up the default headers
+    const defaultHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+
+    // 2. Merge our default headers with any custom headers (like 'POST' method)
+    options.headers = { ...defaultHeaders, ...options.headers };
+
+    // 3. Make the request
+    const response = await fetch(url, options);
+
+    // 4. THIS IS THE CRITICAL FIX
+    // If the server says we're Unauthorized, our token is bad.
+    if (response.status === 401) {
+        logout(); // Call your existing logout function
+        throw new Error('Unauthorized');
+    }
+
+    // If it's not a 401, just return the response
+    return response;
+}
 function displayUsers(users) {
     const usersList = document.getElementById('usersList');
     usersList.innerHTML = '';
@@ -208,12 +230,8 @@ async function addUser() {
     }
     
     try {
-        const response = await fetch('/api/users', {
+        const response = await SecureFetch('/api/users', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            },
             body: JSON.stringify({ username, password, role })
         });
         
@@ -236,11 +254,8 @@ async function deleteUser(userId) {
     }
     
     try {
-        const response = await fetch(`/api/users/${userId}`, {
+        const response = await SecureFetch(`/api/users/${userId}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            }
         });
         
         if (response.ok) {
@@ -258,12 +273,8 @@ async function deleteUser(userId) {
 
 async function loadLogs() {
     try {
-        const response = await fetch('/api/logs', {
-            headers: {
-                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            }
-        });
-        
+        const response = await SecureFetch('/api/logs', {
+        });      
         const data = await response.json();
         displayLogs(data.logs);
     } catch (error) {

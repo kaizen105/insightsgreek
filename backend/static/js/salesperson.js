@@ -8,7 +8,38 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('username').textContent = user.username;
     await loadProducts();
 });
+/**
+ * This new "secureFetch" function will replace all your 
+ * 'fetch' calls. It automatically adds the token and
+ * logs the user out if the token is bad.
+ */
+async function secureFetch(url, options = {}) {
+    const token = getToken();
 
+    // 1. Set up the default headers
+    const defaultHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+
+    // 2. Merge our default headers with any custom headers (like 'POST' method)
+    options.headers = { ...defaultHeaders, ...options.headers };
+
+    // 3. Make the request
+    const response = await fetch(url, options);
+
+    // 4. THIS IS THE CRITICAL FIX
+    // If the server says we're Unauthorized, our token is bad.
+    if (response.status === 401) {
+        // Log the user out and redirect to login
+        logout(); 
+        // Throw an error to stop the rest of the code from running
+        throw new Error('Unauthorized');
+    }
+
+    // If it's not a 401, just return the response
+    return response;
+}
 // === TAB MANAGEMENT ===
 function showTab(tabName) {
     // Hide all tabs
@@ -84,9 +115,8 @@ async function checkGrammar(inputId) {
     outputDiv.innerHTML = 'Checking...';
 
     try {
-        const res = await fetch('/api/check-grammar', {
+        const res = await secureFetch('/api/check-grammar', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
             body: JSON.stringify({ text: text })
         });
         const data = await res.json();
@@ -122,7 +152,7 @@ function resetForm(type) {
 
 async function loadProducts() {
     try {
-        const res = await fetch('/api/products', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+        const res = await secureFetch('/api/products');
         const data = await res.json();
         const list = document.getElementById('productList');
         list.innerHTML = '';
@@ -174,13 +204,9 @@ async function sendChatMessage() {
     const context = document.getElementById(contextId).value;
 
     try {
-        const response = await fetch('/api/chat', {
+        const response = await secureFetch('/api/feedback', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getToken()}`
-            },
-            body: JSON.stringify({ message: msg, context: context })
+            body: JSON.stringify({ text: text })
         });
         const data = await response.json();
         if (response.ok) {
