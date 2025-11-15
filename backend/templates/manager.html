@@ -59,23 +59,13 @@
         <div class="dashboard-section">
             <h3>High-Value Keywords</h3>
             <canvas id="wordcloud"></canvas>
-            </div>
         </div>
 
-        <div class="chart-container">
-            <h3>Customer Sentiment</h3>
-            <canvas id="sentimentChart"></canvas>
-            </div>
-        </div>
-        <!-- 4. RECENT FEEDBACK LIST -->
-        <div class="dashboard-section">
-            <h3>Recent Activity</h3>
-            <div id="feedbackList" class="feedback-list">
-                <!-- Loaded by JS -->
-                <p style="color: #999;">Loading recent feedback...</p>
-            </div>
-        </div>
-    </div>
+        <div class="dashboard-card"> <h3>High-Value Keywords</h3>
+            <canvas id="wordcloud" class="chart-canvas"></canvas> </div>
+
+        <div class="dashboard-card"> <h3>Customer Sentiment</h3>
+            <canvas id="sentimentChart" class="chart-canvas"></canvas> </div>
 
     <script src="{{ url_for('static', filename='js/manager.js') }}"></script>
 </body>
