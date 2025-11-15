@@ -189,6 +189,65 @@ if load_model:
     else:
         print("WARNING: Lead prediction model failed to load.")
 # --------------------------------
+# =======================================================
+# --- TEMPORARY ADMIN ROUTE TO FORCE RE-SEEDING ---
+# =======================================================
+@app.route('/admin/force-reseed')
+def force_reseed():
+    print("!!! ADMIN: FORCING DATABASE RE-SEED !!!")
+
+    # 1. WIPE THE FEEDBACK TABLE
+    try:
+        db.session.query(Feedback).delete()
+        db.session.commit()
+        print("✅ SUCCESS: Feedback table wiped.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ ERROR: Could not wipe table: {e}")
+        return jsonify({"error": str(e)})
+
+    # 2. RUN THE SEEDING LOGIC AGAIN
+    try:
+        print("🌱 Checking database status...")
+        sales_user = User.query.filter_by(role='salesperson').first()
+        if not sales_user:
+            print("❌ ERROR: 'salesperson' user not found. Cannot seed.")
+            return jsonify({"error": "Salesperson user not found"})
+
+        print("📊 Seeding dashboard data...")
+        samples = [
+            ("Customer absolutely loved the demo. They have budget approved and want to start next week.", 0.95, "High"),
+            ("Not interested at all. Said our pricing is ridiculous compared to competitors.", 0.10, "Low"),
+            ("Meeting went okay. They liked Feature A but hated Feature B. Need to nurture.", 0.55, "Medium"),
+            ("Very keen! Asked for a custom quote for 500 seats. Hot lead!", 0.98, "High"),
+            ("They are stuck in an existing contract for another 6 months. Call back later.", 0.30, "Low"),
+            ("Great conversation. Decision maker needs approval from CEO, but looks promising.", 0.75, "High"),
+            ("Just looking around, no immediate need. Maybe next year.", 0.20, "Low"),
+            ("Had technical issues during the demo, they got frustrated and left early.", 0.15, "Low"),
+            ("Wow, they were impressed by the AI features. Wants a follow-up meeting with their CTO.", 0.92, "High"),
+            ("Standard inquiry, sent standard pricing sheet. Waiting to hear back.", 0.50, "Medium"),
+        ]
+        
+        for _ in range(4): # Create 40 entries
+            for text, score, label in samples:
+                days_ago = random.randint(0, 9)
+                hours_ago = random.randint(0, 23)
+                fb = Feedback(
+                    salesperson_id=sales_user.id, text=text, lead_score=score, lead_label=label,
+                    timestamp=datetime.utcnow() - timedelta(days=days_ago, hours=hours_ago),
+                    status='reviewed' if days_ago > 2 else 'new'
+                )
+                db.session.add(fb)
+        
+        db.session.commit()
+        print("✅✅✅ SUCCESS: Dashboard data has been re-seeded!")
+        return jsonify({"message": "SUCCESS: Database has been re-seeded."})
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ ERROR: Could not re-seed data: {e}")
+        return jsonify({"error": str(e)})
+# =======================================================
 
 # JWT token decorator
 def token_required(f):
