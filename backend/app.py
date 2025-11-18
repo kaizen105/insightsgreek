@@ -82,7 +82,6 @@ if GENAI_KEY:
 else:
     print("ℹ️ NOTICE: GOOGLE_API_KEY not set. Chatbot disabled.\n")
     
-    
 # ========== CRITICAL: FIX IMPORTS FOR SIBLING FOLDERS ==========
 # 1. Get the path to the 'backend' folder where this file lives
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -477,28 +476,12 @@ def chat(current_user):
         Give 2-3 short, actionable next steps.
         """
     # ------------------------------------
-    
-    try:
-        # === THIS IS THE FIX ===
-        # It tells Gemini to be less strict and allow sales-related content
-        safety_settings = {
-            'HARASSMENT': 'BLOCK_NONE',
-            'HATE_SPEECH': 'BLOCK_NONE',
-            'SEXUALLY_EXPLICIT': 'BLOCK_NONE',
-            'DANGEROUS_CONTENT': 'BLOCK_NONE'
-        }
-        
-        response = chat_model.generate_content(
-            prompt,
-            safety_settings=safety_settings
-        )
+    response = chat_model.generate_content(
+        prompt,
+    )
         # =======================
         
-        return jsonify({'reply': response.text})
-    except Exception as e:
-        print(f"Chatbot error: {e}")
-        # This will now show the REAL error in your logs, not just 'dangerous_content'
-        return jsonify({'error': str(e)}), 500
+    return jsonify({'reply': response.text})
 # ========== API ROUTES - Products ==========
 
 @app.route('/api/products', methods=['GET'])
@@ -568,28 +551,11 @@ def check_grammar(current_user):
     Only return the corrected text, with no other words, preamble, or quotation marks.
     Original Text: "{text}"
     Corrected Text:"""
-    
-    try:
-        # === THIS IS THE FIX ===
-        safety_settings = {
-            'HARASSMENT': 'BLOCK_NONE',
-            'HATE_SPEECH': 'BLOCK_NONE',
-            'SEXUALLY_EXPLICIT': 'BLOCK_NONE',
-            'DANGEROUS_CONTENT': 'BLOCK_NONE'
-        }
 
-        response = chat_model.generate_content(
-            prompt,
-            safety_settings=safety_settings
-        )
+    response = chat_model.generate_content(
+        prompt,
+    )
         # =======================
-        
-        corrected_text = response.text.strip().strip('"')
-        return jsonify({'corrected_text': corrected_text}), 200
-    except Exception as e:
-        print(f"Grammar check failed: {e}")
-        return jsonify({'error': 'Failed to correct grammar'}), 500
-
 # ========== API ROUTES - Dashboard ==========
 
 # ========== API ROUTES - Dashboard ==========
