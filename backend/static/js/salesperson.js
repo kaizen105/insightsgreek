@@ -224,6 +224,7 @@ function toggleChat() {
     }
 }
 
+// === CHATBOT LOGIC (FIXED) ===
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const msg = input.value.trim();
@@ -233,23 +234,46 @@ async function sendChatMessage() {
     addMessage(msg, 'user');
     input.value = '';
 
-    // Get current context (whichever tab is active)
-    const activeTab = document.querySelector('.tab-content.active').id;
-    const contextId = activeTab === 'feedbackTab' ? 'feedbackText' : 'leadText';
-    const context = document.getElementById(contextId).value;
+    // --- Start: Fix for getting context ---
+    // Your code for finding the active tab was based on a class that wasn't set.
+    // This logic checks the 'display' style, which you *are* setting.
+    let context = '';
+    let contextType = 'lead'; // Default to lead
+    
+    const feedbackTab = document.getElementById('feedbackTab');
+    if (feedbackTab && feedbackTab.style.display === 'block') {
+        // We are in the feedback tab
+        context = document.getElementById('feedbackText').value;
+        contextType = 'feedback';
+    } else {
+        // We are in the lead tab
+        context = document.getElementById('leadText').value;
+        contextType = 'lead';
+    }
+    // --- End: Fix for getting context ---
 
     try {
-        const response = await secureFetch('/api/feedback', {
+        // ✅ 1. Call the correct API: /api/chat
+        const response = await secureFetch('/api/chat', {
             method: 'POST',
-            body: JSON.stringify({ text: text })
+            // ✅ 2. Send the correct JSON body
+            body: JSON.stringify({ 
+                message: msg, 
+                context: context,
+                context_type: contextType // This is for the V2 prompt
+            })
         });
+        
         const data = await response.json();
+        
         if (response.ok) {
+            // ✅ 3. Expect the correct response: data.reply
             addMessage(data.reply, 'bot');
         } else {
             addMessage("Error: " + (data.error || "AI is offline."), 'bot');
         }
     } catch (error) {
+        // This will now only catch real network errors
         addMessage("Connection error.", 'bot');
     }
 }
