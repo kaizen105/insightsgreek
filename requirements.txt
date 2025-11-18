@@ -10,3 +10,4 @@ nltk
 textblob
 huggingface_hub
 psycopg2-binary
+requests
