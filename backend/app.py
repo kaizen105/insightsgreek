@@ -424,29 +424,84 @@ def analyze_feedback(current_user):
 @app.route('/api/chat', methods=['POST'])
 @token_required
 def chat(current_user):
-    if not chat_model: return jsonify({'error': 'Chatbot not configured'}), 503
+    if not chat_model: 
+        return jsonify({'error': 'Chatbot not configured'}), 503
+    
     data = request.get_json()
-    msg, context = data.get('message'), data.get('context', '')
-    if not msg: return jsonify({'error': 'No message'}), 400
+    msg = data.get('message', '')
+    context = data.get('context', '')
+    msg_lower = msg.lower()
+    
+    if not msg: 
+        return jsonify({'error': 'No message'}), 400
 
-    prompt = f"""You are a "V.P. of Sales", acting as an expert coach for a {current_user.role}.
-    A team member has provided the following context and question.
+    # --- NEW 3-MODE PROMPT LOGIC ---
+    
+    # 1. ENHANCE MODE
+    if 'enhance' in msg_lower or 'rewrite' in msg_lower or 'improve' in msg_lower:
+        prompt = f"""You are a "CRM Data Analyst" assistant.
+        A salesperson has provided their raw notes and wants you to rewrite them to be more professional, clear, and structured for a CRM database.
 
-    **Context/Notes:**
-    "{context}"
+        **Raw Notes:**
+        "{context}"
 
-    **Question:**
-    "{msg}"
+        **Instructions:**
+        1.  Correct all grammar and spelling.
+        2.  Organize the notes into 2-3 key bullet points.
+        3.  Conclude with a clear "Next Step" based on the notes.
+        4.  Return *only* the enhanced notes, formatted cleanly.
+        """
 
-    Your task is to provide 3 brief, actionable next steps in a bulleted list.
-    Be professional, concise, and focus on closing the deal or solving the problem.
-    """
+    # 2. SUGGEST MODE
+    elif 'suggest' in msg_lower or 'find' in msg_lower or 'new lead' in msg_lower:
+        prompt = f"""You are a "Sales Strategist" assistant.
+        A salesperson is asking for help finding new leads.
+
+        **Their Request:**
+        "{msg}"
+        
+        **Context (current leads they are working on, if any):**
+        "{context}"
+
+        **Instructions:**
+        Provide 3 creative, actionable strategies for finding new leads relevant to their context.
+        If the context is empty, provide general B2B sales lead-generation strategies.
+        Be concise.
+        """
+
+    # 3. COACH MODE (Default)
+    else:
+        prompt = f"""You are an expert "Closer" and sales coach for a {current_user.role}.
+        A salesperson is asking for advice on a specific lead.
+
+        **Lead Notes:**
+        "{context}"
+
+        **Their Question:**
+        "{msg}"
+
+        Give 2-3 short, actionable next steps to help them solve this problem or close this deal.
+        """
+    # ------------------------------------
     
     try:
-        response = chat_model.generate_content(prompt)
+        # This tells Gemini to be less strict about "sales" language
+        safety_settings = {
+            'HARASSMENT': 'BLOCK_NONE',
+            'HATE_SPEECH': 'BLOCK_NONE',
+            'SEXUALLY_EXPLICIT': 'BLOCK_NONE',
+            'DANGEROUS_CONTENT': 'BLOCK_NONE'
+        }
+        
+        response = chat_model.generate_content(
+            prompt,
+            safety_settings=safety_settings
+        )
+        
         return jsonify({'reply': response.text})
-    except Exception as e: return jsonify({'error': str(e)}), 500
-
+    except Exception as e:
+        print(f"Chatbot error: {e}")
+        return jsonify({'error': str(e)}), 500
 # ========== API ROUTES - Products ==========
 
 @app.route('/api/products', methods=['GET'])
