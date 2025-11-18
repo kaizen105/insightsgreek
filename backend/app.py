@@ -435,57 +435,39 @@ def chat(current_user):
     if not msg: 
         return jsonify({'error': 'No message'}), 400
 
-    # --- NEW 3-MODE PROMPT LOGIC ---
+    # --- 3-MODE PROMPT LOGIC ---
     
     # 1. ENHANCE MODE
     if 'enhance' in msg_lower or 'rewrite' in msg_lower or 'improve' in msg_lower:
         prompt = f"""You are a "CRM Data Analyst" assistant.
-        A salesperson has provided their raw notes and wants you to rewrite them to be more professional, clear, and structured for a CRM database.
+        A salesperson has provided their raw notes and wants you to rewrite them.
 
-        **Raw Notes:**
-        "{context}"
-
-        **Instructions:**
-        1.  Correct all grammar and spelling.
-        2.  Organize the notes into 2-3 key bullet points.
-        3.  Conclude with a clear "Next Step" based on the notes.
-        4.  Return *only* the enhanced notes, formatted cleanly.
+        **Raw Notes:** "{context}"
+        **Instructions:** Correct all grammar and organize into 2-3 key bullet points with a "Next Step".
+        Return *only* the enhanced notes.
         """
 
     # 2. SUGGEST MODE
     elif 'suggest' in msg_lower or 'find' in msg_lower or 'new lead' in msg_lower:
         prompt = f"""You are a "Sales Strategist" assistant.
         A salesperson is asking for help finding new leads.
-
-        **Their Request:**
-        "{msg}"
-        
-        **Context (current leads they are working on, if any):**
-        "{context}"
-
-        **Instructions:**
-        Provide 3 creative, actionable strategies for finding new leads relevant to their context.
-        If the context is empty, provide general B2B sales lead-generation strategies.
-        Be concise.
+        **Their Request:** "{msg}"
+        **Context:** "{context}"
+        **Instructions:** Provide 3 creative, actionable strategies for finding new leads.
         """
 
     # 3. COACH MODE (Default)
     else:
         prompt = f"""You are an expert "Closer" and sales coach for a {current_user.role}.
-        A salesperson is asking for advice on a specific lead.
-
-        **Lead Notes:**
-        "{context}"
-
-        **Their Question:**
-        "{msg}"
-
-        Give 2-3 short, actionable next steps to help them solve this problem or close this deal.
+        **Lead Notes:** "{context}"
+        **Their Question:** "{msg}"
+        Give 2-3 short, actionable next steps.
         """
     # ------------------------------------
     
     try:
-        # This tells Gemini to be less strict about "sales" language
+        # === THIS IS THE FIX ===
+        # It tells Gemini to be less strict and allow sales-related content
         safety_settings = {
             'HARASSMENT': 'BLOCK_NONE',
             'HATE_SPEECH': 'BLOCK_NONE',
@@ -497,10 +479,12 @@ def chat(current_user):
             prompt,
             safety_settings=safety_settings
         )
+        # =======================
         
         return jsonify({'reply': response.text})
     except Exception as e:
         print(f"Chatbot error: {e}")
+        # This will now show the REAL error in your logs, not just 'dangerous_content'
         return jsonify({'error': str(e)}), 500
 # ========== API ROUTES - Products ==========
 
@@ -564,21 +548,30 @@ def check_grammar(current_user):
     if not text:
         return jsonify({'error': 'No text provided'}), 400
     
-    # Check if the chat model (Gemini) is even loaded
     if not chat_model:
         return jsonify({'error': 'AI model not configured'}), 503
 
-    # Create a specific prompt for grammar correction
     prompt = f"""You are a helpful assistant. Correct the grammar, spelling, and punctuation of the following text.
     Only return the corrected text, with no other words, preamble, or quotation marks.
     Original Text: "{text}"
     Corrected Text:"""
     
     try:
-        # Use the same chat_model you use for your chatbot
-        response = chat_model.generate_content(prompt)
-        corrected_text = response.text.strip().strip('"') # Clean up any extra quotes
+        # === THIS IS THE FIX ===
+        safety_settings = {
+            'HARASSMENT': 'BLOCK_NONE',
+            'HATE_SPEECH': 'BLOCK_NONE',
+            'SEXUALLY_EXPLICIT': 'BLOCK_NONE',
+            'DANGEROUS_CONTENT': 'BLOCK_NONE'
+        }
+
+        response = chat_model.generate_content(
+            prompt,
+            safety_settings=safety_settings
+        )
+        # =======================
         
+        corrected_text = response.text.strip().strip('"')
         return jsonify({'corrected_text': corrected_text}), 200
     except Exception as e:
         print(f"Grammar check failed: {e}")

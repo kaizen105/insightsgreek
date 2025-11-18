@@ -119,7 +119,7 @@ async function submitData(type) {
                     else labelColor = '#dc2626';
                 } else {
                     // This is Feedback (-1 to 1 score)
-                    scoreText = resultData.score.toFixed(2); // Show sentiment score
+                    scoreText = (resultData.score*100); // Show sentiment score
                     if (resultData.label === 'Positive') labelColor = '#059669';
                     else if (resultData.label === 'Neutral') labelColor = '#6b7280';
                     else labelColor = '#dc2626';

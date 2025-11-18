@@ -225,30 +225,70 @@ function generateWordCloud(wordData) {
         }
     });
 }
-// Display recent list
+// Display recent list (FIXED VERSION)
 function displayRecentFeedbacks(feedbacks) {
     const list = document.getElementById('feedbackList');
-    list.innerHTML = '';
+    list.innerHTML = ''; // Clear old list
+    
     feedbacks.forEach(f => {
         const div = document.createElement('div');
         div.className = 'feedback-item';
-        // Show ML score if available
-        const scoreBadge = f.lead_label ? 
-            `<span style="float:right; font-size:0.8em; padding: 2px 8px; border-radius:10px; background:${f.lead_label === 'High' ? '#dcfce7; color:#166534' : '#f3f4f6; color:#374151'}">${f.lead_label} (${(f.lead_score*100).toFixed(0)}%)</span>` 
-            : '';
+        
+        let statusTag = '';
+        let scoreBadge = '';
+
+        // 1. Check the 'status' to decide what to show
+        if (f.status === 'lead') {
+            // --- This is a LEAD ---
+            statusTag = `<span class="status-tag lead">LEAD</span>`;
             
+            // Use the lead_label and lead_score
+            if (f.lead_label) {
+                let scorePercent = (f.lead_score * 100).toFixed(0);
+                let bgColor = f.lead_label === 'High' ? '#dcfce7' : '#f3f4f6';
+                let fgColor = f.lead_label === 'High' ? '#166534' : '#374151';
+                
+                scoreBadge = `<span class="score-badge" style="background:${bgColor}; color:${fgColor}">
+                                ${f.lead_label} (${scorePercent}%)
+                              </span>`;
+            }
+
+        } else if (f.status === 'feedback') {
+            // --- This is FEEDBACK ---
+            statusTag = `<span class="status-tag feedback">FEEDBACK</span>`;
+
+            // Use the sentiment_label and sentiment_score
+            if (f.sentiment_label) {
+                // 2. Convert sentiment score (-1 to 1) to percentage (0 to 100)
+                let scorePercent = ((f.sentiment_score + 1) / 2 * 100).toFixed(0);
+                
+                let bgColor = '#f3f4f6'; // Neutral
+                let fgColor = '#374151';
+                if (f.sentiment_label === 'Positive') {
+                    bgColor = '#dcfce7'; fgColor = '#166534';
+                } else if (f.sentiment_label === 'Negative') {
+                    bgColor = '#fee2e2'; fgColor = '#991b1b';
+                }
+
+                scoreBadge = `<span class="score-badge" style="background:${bgColor}; color:${fgColor}">
+                                ${f.sentiment_label} (${scorePercent}%)
+                              </span>`;
+            }
+        }
+            
+        // 3. Build the final HTML with the new tags
         div.innerHTML = `
             <div class="feedback-header">
                 <strong>${f.salesperson}</strong>
-                ${scoreBadge}
-                <span>${new Date(f.timestamp).toLocaleDateString()}</span>
+                <div>
+                    ${statusTag}    ${scoreBadge}   </div>
             </div>
             <p>${f.text}</p>
+            <span class="feedback-timestamp">${new Date(f.timestamp).toLocaleDateString()}</span>
         `;
         list.appendChild(div);
     });
 }
-
 // Download CSV Report
 async function downloadReport() {
     try {
