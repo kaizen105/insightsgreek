@@ -429,10 +429,18 @@ def chat(current_user):
     msg, context = data.get('message'), data.get('context', '')
     if not msg: return jsonify({'error': 'No message'}), 400
 
-    prompt = f"""You are a helpful sales assistant for a {current_user.role}.
-    CURRENT TASK CONTEXT: "{context}"
-    USER QUESTION: {msg}
-    Be concise and action-oriented."""
+    prompt = f"""You are a "V.P. of Sales", acting as an expert coach for a {current_user.role}.
+    A team member has provided the following context and question.
+
+    **Context/Notes:**
+    "{context}"
+
+    **Question:**
+    "{msg}"
+
+    Your task is to provide 3 brief, actionable next steps in a bulleted list.
+    Be professional, concise, and focus on closing the deal or solving the problem.
+    """
     
     try:
         response = chat_model.generate_content(prompt)
@@ -498,19 +506,28 @@ def check_grammar(current_user):
     data = request.get_json()
     text = data.get('text', '')
     
-    corrected = text.strip()
-    corrected = re.sub(r'\s+', ' ', corrected)
-    corrected = corrected.capitalize()
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
     
-    corrections = {
-        ' i ': ' I ', "dont": "don't", "cant": "can't",
-        "wont": "won't", "thats": "that's", "its": "it's"
-    }
-    for mistake, correction in corrections.items():
-        corrected = corrected.replace(mistake, correction)
-    
-    return jsonify({'corrected_text': corrected}), 200
+    # Check if the chat model (Gemini) is even loaded
+    if not chat_model:
+        return jsonify({'error': 'AI model not configured'}), 503
 
+    # Create a specific prompt for grammar correction
+    prompt = f"""You are a helpful assistant. Correct the grammar, spelling, and punctuation of the following text.
+    Only return the corrected text, with no other words, preamble, or quotation marks.
+    Original Text: "{text}"
+    Corrected Text:"""
+    
+    try:
+        # Use the same chat_model you use for your chatbot
+        response = chat_model.generate_content(prompt)
+        corrected_text = response.text.strip().strip('"') # Clean up any extra quotes
+        
+        return jsonify({'corrected_text': corrected_text}), 200
+    except Exception as e:
+        print(f"Grammar check failed: {e}")
+        return jsonify({'error': 'Failed to correct grammar'}), 500
 
 # ========== API ROUTES - Dashboard ==========
 
