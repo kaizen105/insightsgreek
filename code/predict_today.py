@@ -1,53 +1,55 @@
 import os
-from huggingface_hub import InferenceClient
+import requests
 
-# 1. Setup Client
+# 1. Get Token
 HF_TOKEN = os.environ.get('HF_TOKEN')
-# Using a Zero-Shot Classification model for scoring
-# This model is great at saying if text belongs to a label
-MODEL_REPO = "facebook/bart-large-mnli" 
+
+# 2. Point to YOUR Hosted Model
+# This is the exact repo from your screenshot
+MODEL_REPO = "kaizen696/my_lead_model"
+API_URL = f"https://api-inference.huggingface.co/models/{MODEL_REPO}"
 
 def load_model():
-    # No local model to load, just check if Token exists
+    # We don't need to load anything locally!
     if not HF_TOKEN:
         print("❌ Error: HF_TOKEN not found.")
         return None
-    return True # Signal that we are ready
+    print(f"✅ Using Hosted Model: {MODEL_REPO}")
+    return True 
 
 def predict_probability(model, text):
     """
-    Uses Hugging Face API to classify text as 'High Value Lead'.
-    Returns probability 0.0 - 1.0
+    Sends text to your hosted Hugging Face model.
     """
     if not HF_TOKEN: return 0.0
 
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    payload = {"inputs": text}
+
     try:
-        client = InferenceClient(token=HF_TOKEN)
+        # Call the API
+        response = requests.post(API_URL, headers=headers, json=payload)
+        result = response.json()
+
+        # Handle model loading state (503 error)
+        if 'error' in result and 'loading' in result['error']:
+            print("⏳ Model is loading on HF servers... waiting...")
+            return 0.0 # Or retry logic
+
+        # Parse the result
+        # Your model likely returns: [[{'label': 'LABEL_1', 'score': 0.99}, ...]]
+        if isinstance(result, list) and len(result) > 0:
+            scores = result[0] 
+            
+            # Find the Positive Score
+            # You trained it, so check if 'LABEL_1' or 'High' is the positive one.
+            # Assuming 'LABEL_1' based on standard training.
+            for item in scores:
+                if item['label'] in ['LABEL_1', 'POSITIVE', 'High']:
+                    return float(item['score'])
         
-        # We ask the model: Is this text related to "Buying intent"?
-        # It returns scores for labels we provide.
-        result = client.zero_shot_classification(
-            text,
-            candidate_labels=["buying intent", "not interested"],
-            model=MODEL_REPO
-        )
-        
-        # result looks like: 
-        # {'labels': ['buying intent', 'not interested'], 'scores': [0.95, 0.05]}
-        
-        # Find score for "buying intent"
-        scores = result['scores']
-        labels = result['labels']
-        
-        # Get score for the positive label
-        for i, label in enumerate(labels):
-            if label == "buying intent":
-                return float(scores[i])
-                
         return 0.0
 
     except Exception as e:
-        print(f"❌ API Prediction Error: {e}")
-        # Fallback to TextBlob if API fails (keeps app alive)
-        from textblob import TextBlob
-        return (TextBlob(text).sentiment.polarity + 1) / 2
+        print(f"❌ HF API Error: {e}")
+        return 0.0
