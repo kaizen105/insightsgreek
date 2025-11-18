@@ -8,6 +8,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('username').textContent = user.username;
     await loadProducts();
 });
+
 /**
  * This new "secureFetch" function will replace all your 
  * 'fetch' calls. It automatically adds the token and
@@ -40,6 +41,7 @@ async function secureFetch(url, options = {}) {
     // If it's not a 401, just return the response
     return response;
 }
+
 // === TAB MANAGEMENT ===
 function showTab(tabName) {
     // Hide all tabs
@@ -137,6 +139,7 @@ async function submitData(type) {
         showStatus('Error submitting data', 'error');
     }
 }
+
 // === GRAMMAR CHECKER (Now handles both inputs) ===
 async function checkGrammar(inputId) {
     const text = document.getElementById(inputId).value;
@@ -209,7 +212,6 @@ function logout() {
     localStorage.clear(); sessionStorage.clear();
     window.location.href = '/login';
 }
-// ... existing code ...
 
 // === CHATBOT LOGIC ===
 function toggleChat() {
@@ -224,22 +226,20 @@ function toggleChat() {
     }
 }
 
-// === CHATBOT LOGIC (FIXED) ===
+// === CHATBOT LOGIC (ENHANCED WITH LEAD VALIDATION) ===
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const msg = input.value.trim();
     if (!msg) return;
-
+    
     // Add user message to UI
     addMessage(msg, 'user');
     input.value = '';
-
-    // --- Start: Fix for getting context ---
-    // Your code for finding the active tab was based on a class that wasn't set.
-    // This logic checks the 'display' style, which you *are* setting.
+    
+    // Get context from active tab
     let context = '';
     let contextType = 'lead'; // Default to lead
-    
+   
     const feedbackTab = document.getElementById('feedbackTab');
     if (feedbackTab && feedbackTab.style.display === 'block') {
         // We are in the feedback tab
@@ -250,25 +250,77 @@ async function sendChatMessage() {
         context = document.getElementById('leadText').value;
         contextType = 'lead';
     }
-    // --- End: Fix for getting context ---
-
+    
     try {
-        // ✅ 1. Call the correct API: /api/chat
+        // Call the chat API
         const response = await secureFetch('/api/chat', {
             method: 'POST',
-            // ✅ 2. Send the correct JSON body
-            body: JSON.stringify({ 
-                message: msg, 
+            body: JSON.stringify({
+                message: msg,
                 context: context,
-                context_type: contextType // This is for the V2 prompt
+                context_type: contextType
             })
         });
-        
+       
         const data = await response.json();
-        
+       
         if (response.ok) {
-            // ✅ 3. Expect the correct response: data.reply
-            addMessage(data.reply, 'bot');
+            // Check if response contains leads
+            if (data.reply && (data.reply.includes('Prospect:') || data.reply.includes('- Lead'))) {
+                // Call validation endpoint
+                const valResponse = await secureFetch('/api/validate-leads', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        leads_text: data.reply
+                    })
+                });
+                
+                const valData = await valResponse.json();
+                
+                if (valResponse.ok) {
+                    // Format scored leads for display with improved styling
+                    let scoredReply = '<div style="margin-bottom: 15px;">';
+                    
+                    // 1. Show the original leads with proper formatting
+                    scoredReply += '<strong>💼 Generated Leads:</strong><br><br>';
+                    scoredReply += data.reply.replace(/\n/g, '<br>').replace(/- Lead \d+:/g, '<br><strong>$&</strong>');
+                    
+                    // 2. Add a divider
+                    scoredReply += '<br><hr style="margin: 15px 0; border: 1px solid #e5e7eb;"><br>';
+                    
+                    // 3. Show AI quality scores in a clean format
+                    scoredReply += '<strong>🎯 AI Quality Scores:</strong><br><br>';
+                    scoredReply += '<ul style="list-style: none; padding: 0;">';
+                    
+                    valData.validated_leads.forEach((lead, index) => {
+                        const colorClass = lead.label === 'High' ? '#059669' : 
+                                         lead.label === 'Medium' ? '#d97706' : '#dc2626';
+                        const emoji = lead.label === 'High' ? '🔥' : lead.label === 'Medium' ? '⚡' : '❄️';
+                        
+                        scoredReply += `
+                            <li style="margin-bottom: 12px; padding: 10px; background: #f9fafb; border-left: 4px solid ${colorClass}; border-radius: 4px;">
+                                ${emoji} <strong style="color: ${colorClass};">${lead.label}</strong> 
+                                (Score: ${(lead.score * 100).toFixed(0)}%) 
+                                <br>
+                                <span style="font-size: 0.9em; color: #6b7280;">${lead.lead_snippet}</span>
+                                <br>
+                                <em style="font-size: 0.85em; color: #9ca3af;">💡 ${lead.tip}</em>
+                            </li>
+                        `;
+                    });
+                    
+                    scoredReply += '</ul><br>';
+                    scoredReply += `<strong>📊 Summary:</strong> ${valData.recommendation}</div>`;
+                    
+                    addMessage(scoredReply, 'bot');
+                } else {
+                    // Fallback: Just show raw reply if validation fails
+                    addMessage(data.reply, 'bot');
+                }
+            } else {
+                // Non-lead response: Show raw
+                addMessage(data.reply, 'bot');
+            }
         } else {
             addMessage("Error: " + (data.error || "AI is offline."), 'bot');
         }
@@ -281,8 +333,19 @@ async function sendChatMessage() {
 function addMessage(text, sender) {
     const div = document.createElement('div');
     div.className = `message ${sender}`;
-    // Simple markdown-like bolding for AI responses
-    div.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+    
+    // Basic markdown-like replacement for bolding
+    let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // If the text contains HTML tags (like <ul>, <li>, <br>, <div>), 
+    // we trust it (since we generated it) and set innerHTML directly.
+    if (text.includes('<') && text.includes('>')) {
+        div.innerHTML = formattedText; 
+    } else {
+        // Otherwise, treat newlines as breaks for normal text
+        div.innerHTML = formattedText.replace(/\n/g, '<br>');
+    }
+
     document.getElementById('chatMessages').appendChild(div);
     document.getElementById('chatMessages').scrollTop = 9999; // Auto-scroll to bottom
 }

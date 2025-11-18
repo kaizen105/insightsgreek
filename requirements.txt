@@ -8,5 +8,8 @@ scikit-learn
 joblib
 nltk
 textblob
-google-generativeai
+huggingface_hub
 psycopg2-binary
+torch
+transformers
+--extra-index-url https://download.pytorch.org/whl/cpu  
