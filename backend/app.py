@@ -41,9 +41,18 @@ import google.generativeai as genai
 GENAI_KEY = os.environ.get('GOOGLE_API_KEY')
 chat_model = None
 
+# === THIS IS THE FIX ===
+# We define the safety settings *once* here
+safety_settings = {
+    'HARASSMENT': 'BLOCK_NONE',
+    'HATE_SPEECH': 'BLOCK_NONE',
+    'SEXUALLY_EXPLICIT': 'BLOCK_NONE',
+    'DANGEROUS_CONTENT': 'BLOCK_NONE'
+}
+# =======================
+
 if GENAI_KEY:
     genai.configure(api_key=GENAI_KEY)
-    # UPDATED: List of models your key actually supports
     POSSIBLE_MODELS = [
         'gemini-2.5-flash',
         'gemini-2.0-flash-exp',
@@ -54,22 +63,26 @@ if GENAI_KEY:
     print("\n🤖 Connecting to AI...")
     for model_name in POSSIBLE_MODELS:
         try:
-            # Try to initialize and run a quick test
-            temp_model = genai.GenerativeModel(model_name)
+            # Pass the safety settings during model initialization
+            temp_model = genai.GenerativeModel(
+                model_name,
+                safety_settings=safety_settings  # <-- FIX IS HERE
+            )
             # A dummy generation to ensure it actually works
             temp_model.generate_content("test", request_options={'timeout': 10}) 
             chat_model = temp_model
             print(f"✅ SUCCESS: Connected to Gemini using model: '{model_name}'\n")
             break
         except Exception:
-             continue
+            continue
 
     if not chat_model:
         print("\n❌ ERROR: Still could not connect to any Gemini model.")
         print("Please check your API key and internet connection.\n")
 else:
     print("ℹ️ NOTICE: GOOGLE_API_KEY not set. Chatbot disabled.\n")
-
+    
+    
 # ========== CRITICAL: FIX IMPORTS FOR SIBLING FOLDERS ==========
 # 1. Get the path to the 'backend' folder where this file lives
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
