@@ -69,31 +69,29 @@ print("✅ Flask app initialized and ready to bind to port\n")
 import threading
 
 # --- Initialize global ML variables ---
-sentiment_pipeline = None
 zero_shot_pipeline = None
 predict_probability = None
 predict_lead_quality = None
 ml_loading_complete = False
 
 def load_sentiment_model_async():
-    """Load pretrained models (Sentiment + Lead Quality) in background thread"""
-    global sentiment_pipeline, zero_shot_pipeline, predict_probability, predict_lead_quality, ml_loading_complete
+    """Load ultra-lightweight DeBERTa-v3-xsmall in background thread"""
+    global zero_shot_pipeline, predict_probability, predict_lead_quality, ml_loading_complete
     
-    print("\n⏳ Background: Loading pretrained models from Hugging Face...")
+    print("\n⏳ Background: Loading ultra-lightweight classification model...")
     try:
         from predict_today import load_model, predict_probability as predict_func, predict_lead_quality as lead_quality_func
         print("✅ Background: Module imported")
         
         ml_components = load_model()
         if ml_components:
-            sentiment_pipeline, zero_shot_pipeline = ml_components
+            zero_shot_pipeline, _ = ml_components
             predict_probability = predict_func
             predict_lead_quality = lead_quality_func
-            print("✅ Background: Sentiment model loaded successfully")
-            print("✅ Background: Lead quality model loaded successfully")
-            logging.info("Models loaded in background: Sentiment (DistilBERT) + Lead Quality (BART)")
+            print("✅ Background: Model loaded successfully")
+            logging.info("DeBERTa-v3-xsmall loaded in background")
         else:
-            print("⚠️  Background: Models returned None")
+            print("⚠️  Background: Model returned None")
             
     except Exception as e:
         print(f"⚠️  Background: Model load failed: {str(e)}")
@@ -304,10 +302,10 @@ def submit_lead(current_user):
     
     lead_score = None
     lead_label = None
-    if sentiment_pipeline and zero_shot_pipeline and predict_lead_quality:
+    if zero_shot_pipeline and predict_lead_quality:
         try:
             print(f"\n🔍 DEBUG: Calling predict_lead_quality with text: {text[:100]}")
-            lead_score = predict_lead_quality((sentiment_pipeline, zero_shot_pipeline), text)
+            lead_score = predict_lead_quality((zero_shot_pipeline, None), text)
             print(f"✅ DEBUG: Got lead_score = {lead_score}")
             
             # Thresholds based on zero-shot lead quality classification
@@ -326,7 +324,7 @@ def submit_lead(current_user):
             lead_score = 0.0
             lead_label = "Error"
     else:
-        print(f"⚠️  DEBUG: Models not loaded yet. sentiment_pipeline={bool(sentiment_pipeline)}, zero_shot_pipeline={bool(zero_shot_pipeline)}, predict_lead_quality={bool(predict_lead_quality)}")
+        print(f"⚠️  DEBUG: Model not loaded yet. zero_shot_pipeline={bool(zero_shot_pipeline)}, predict_lead_quality={bool(predict_lead_quality)}")
 
     new_entry = Feedback(salesperson_id=current_user.id, text=text, lead_score=lead_score, lead_label=lead_label, status='lead')
     
@@ -346,10 +344,10 @@ def analyze_feedback(current_user):
     if not text:
         return jsonify({'error': 'Feedback text is required'}), 400
 
-    # --- USING SENTIMENT PIPELINE (AI) ---
-    if sentiment_pipeline:
-        # Use the global sentiment_pipeline with predict_probability helper
-        sentiment_score = predict_probability((sentiment_pipeline, zero_shot_pipeline), text)
+    # --- USING ZERO-SHOT PIPELINE (AI) ---
+    if zero_shot_pipeline:
+        # Use the global zero_shot_pipeline with predict_probability helper
+        sentiment_score = predict_probability((zero_shot_pipeline, None), text)
         
         # Custom thresholds
         if sentiment_score > 0.6:
@@ -429,7 +427,7 @@ def chat(current_user):
 @app.route('/api/validate-leads', methods=['POST'])
 @token_required
 def validate_leads(current_user):
-    if not sentiment_pipeline or not zero_shot_pipeline or not predict_lead_quality:
+    if not zero_shot_pipeline or not predict_lead_quality:
         return jsonify({'error': 'ML model unavailable'}), 503
 
     data = request.get_json()
@@ -446,7 +444,7 @@ def validate_leads(current_user):
         key_phrase = parts[0].strip() if len(parts) > 0 else lead.strip()
         
         try:
-            score = predict_lead_quality((sentiment_pipeline, zero_shot_pipeline), key_phrase)
+            score = predict_lead_quality((zero_shot_pipeline, None), key_phrase)
             label = "High" if score >= 0.7 else "Medium" if score >= 0.4 else "Low"
             logging.info(f"Validated lead snippet scored: {score:.4f} -> {label}")
 
@@ -513,12 +511,12 @@ def predict_lead_standalone(current_user):
         return jsonify({'error': 'No text provided'}), 400
     
     # --- CHECK CORRECT GLOBAL VARIABLES ---
-    if not sentiment_pipeline or not zero_shot_pipeline:
+    if not zero_shot_pipeline:
         return jsonify({'error': 'ML models loading...'}), 503
 
     try:
-        # --- USE predict_lead_quality (NOT predict_probability) ---
-        score = predict_lead_quality((sentiment_pipeline, zero_shot_pipeline), text)
+        # --- USE predict_lead_quality ---
+        score = predict_lead_quality((zero_shot_pipeline, None), text)
         
         if score >= 0.7:
             label = "High"

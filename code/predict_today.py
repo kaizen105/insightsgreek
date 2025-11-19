@@ -1,112 +1,100 @@
 """
-Sentiment Analysis & Lead Quality Prediction using Hugging Face Pretrained Models
-- distilbert-base-uncased-finetuned-sst-2-english: General sentiment (customer feedback)
-- facebook/bart-large-mnli: Zero-shot classification (lead quality detection)
-- Fast inference, no torch, no timeouts
+Ultra-Lightweight Sentiment & Lead Quality using Hugging Face
+- MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33: ~100MB ultra-compact
+  Does sentiment AND lead quality classification
+- Perfect fit for 512MB Render free tier
 """
 
 from transformers import pipeline
 
-# Global model instances (lazy loaded)
-sentiment_pipeline = None
+# Global model instance (lazy loaded)
 zero_shot_pipeline = None
 
 def load_model():
     """
-    Load pretrained models for sentiment and lead quality analysis
-    Returns: (sentiment_pipeline, zero_shot_pipeline)
+    Load ultra-lightweight DeBERTa-v3-xsmall for ALL classification tasks
+    Returns: (zero_shot_pipeline, None)
     """
-    global sentiment_pipeline, zero_shot_pipeline
-    
-    if sentiment_pipeline is None:
-        print("⏳ Loading Sentiment Analysis Model (Twitter RoBERTa)...")
-        # cardiffnlp/twitter-roberta-base-sentiment-latest:
-        # - Trained on tweets (similar to sales feedback: short, informal, slang)
-        # - Better at detecting neutral comments in business context
-        # - Outputs: 'positive', 'neutral', 'negative'
-        sentiment_pipeline = pipeline(
-            "sentiment-analysis",
-            model="cardiffnlp/twitter-roberta-base-sentiment-latest",
-            device=-1  # CPU
-        )
-        print("✅ Sentiment model loaded")
+    global zero_shot_pipeline
     
     if zero_shot_pipeline is None:
-        print("⏳ Loading Lead Quality Model (DeBERTa v3)...")
-        # MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli:
-        # - SOTA (State of the Art) for zero-shot classification
-        # - Smarter at understanding lead quality vs just "interested"
-        # - Better relationship understanding than BART
+        print("⏳ Loading Classification Model (DeBERTa-v3-xsmall)...")
+        # MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33:
+        # - Ultra-lightweight (~100MB)
+        # - Can handle sentiment, lead quality, any zero-shot task
+        # - SOTA quality despite tiny size
         zero_shot_pipeline = pipeline(
             "zero-shot-classification",
-            model="MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+            model="MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33",
             device=-1  # CPU
         )
-        print("✅ Lead quality model loaded")
+        print("✅ Classification model loaded")
     
-    return (sentiment_pipeline, zero_shot_pipeline)
+    return (zero_shot_pipeline, None)
 
 
 def predict_probability(model_tuple, text):
     """
-    Predict sentiment for given text (feedback analysis)
+    Predict sentiment using zero-shot classification
     
     Args:
-        model_tuple: (sentiment_pipeline, zero_shot_pipeline)
+        model_tuple: (zero_shot_pipeline, None)
         text: string to analyze
     
     Returns:
         float: 0.0 to 1.0 (0=Negative, 1=Positive)
     """
-    sentiment_pipe, _ = model_tuple
+    zero_shot_pipe, _ = model_tuple
     
-    if sentiment_pipe is None:
+    if zero_shot_pipe is None:
         print("⚠️  Model not loaded, returning neutral score")
         return 0.5
     
     try:
-        # Clean text
         text = str(text).strip()
         if not text:
             return 0.5
         
-        # Get sentiment prediction
-        result = sentiment_pipe(text[:512])[0]  # Limit to 512 tokens
+        # Sentiment classification
+        candidate_labels = ["positive sentiment", "negative sentiment"]
+        result = zero_shot_pipe(text[:512], candidate_labels)
         
-        # Twitter RoBERTa outputs lowercase labels: 'positive', 'neutral', 'negative'
-        # Sometimes outputs Label_0, Label_1, Label_2
-        label = result['label'].lower()
-        score = result['score']
+        print(f"🔍 Sentiment result: {result}")
         
-        # Handle different label formats
-        if 'positive' in label or 'label_0' in label:
-            return float(score)
-        elif 'negative' in label or 'label_2' in label:
-            return float(1.0 - score)
-        else:  # neutral or label_1
+        if not result.get('scores'):
             return 0.5
+            
+        top_label = result['labels'][0]
+        top_score = result['scores'][0]
+        
+        # If top label is positive, return score. If negative, return 1-score
+        if "positive" in top_label.lower():
+            return float(top_score)
+        else:
+            return float(1.0 - top_score)
             
     except Exception as e:
         print(f"❌ Sentiment prediction error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return 0.5
 
 
 def predict_lead_quality(model_tuple, text):
     """
     Predict lead quality using zero-shot classification
-    Perfect for sales lead scoring
     
     Args:
-        model_tuple: (sentiment_pipeline, zero_shot_pipeline)
+        model_tuple: (zero_shot_pipeline, None)
         text: lead description
     
     Returns:
         float: 0.0 to 1.0 score
     """
-    _, zero_shot_pipe = model_tuple
+    zero_shot_pipe, _ = model_tuple
     
     if zero_shot_pipe is None:
-        print("⚠️  Lead quality model not loaded, returning neutral")
+        print("⚠️  Model not loaded, returning neutral")
         return 0.5
     
     try:
@@ -114,43 +102,25 @@ def predict_lead_quality(model_tuple, text):
         if not text:
             return 0.5
         
-        # Define candidate labels for lead quality
+        # Lead quality classification
         candidate_labels = ["high-value sales lead", "medium-quality lead", "low-priority lead"]
-        
-        # Zero-shot classification
         result = zero_shot_pipe(text[:512], candidate_labels)
         
-        # Debug: print result structure
-        print(f"🔍 Zero-shot result: {result}")
+        print(f"🔍 Lead quality result: {result}")
         
-        # result = {
-        #     'sequence': text,
-        #     'labels': ['high-value sales lead', 'medium-quality lead', 'low-priority lead'],
-        #     'scores': [0.85, 0.10, 0.05]
-        # }
-        
-        if not result.get('scores') or len(result['scores']) == 0:
-            print("⚠️  No scores returned from zero-shot model")
+        if not result.get('scores'):
             return 0.5
             
-        top_label = result['labels'][0] if result.get('labels') else ""
-        top_score = result['scores'][0] if result.get('scores') else 0.5
+        top_label = result['labels'][0]
+        top_score = result['scores'][0]
         
-        print(f"📊 Top label: {top_label}, Score: {top_score}")
-        
-        # Map to 0-1 scale based on label
+        # Map to 0-1 scale
         if "high" in top_label.lower():
-            final_score = float(top_score)
-            print(f"✅ High-value lead detected: {final_score}")
-            return final_score
+            return float(top_score)
         elif "medium" in top_label.lower():
-            final_score = float(0.5 + (top_score * 0.25))
-            print(f"📌 Medium lead detected: {final_score}")
-            return final_score
+            return float(0.5 + (top_score * 0.25))
         else:  # low-priority
-            final_score = float(top_score * 0.45)
-            print(f"❌ Low-priority lead detected: {final_score}")
-            return final_score
+            return float(top_score * 0.45)
             
     except Exception as e:
         print(f"❌ Lead quality prediction error: {str(e)}")
