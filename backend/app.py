@@ -49,62 +49,7 @@ if PROJECT_ROOT not in sys.path:
 if CODE_DIR not in sys.path: 
     sys.path.append(CODE_DIR)
 
-# --- NEW BERT MODEL INTEGRATION ---
-# --- NEW BERT MODEL INTEGRATION ---
-print("\n" + "="*60)
-print("⏳ Attempting to load BERT model...")
-print("="*60)
-
-ml_model = None
-ml_tokenizer = None
-predict_probability = None
-
-try:
-    print("📍 Step 1: Importing predict_today module...")
-    from predict_today import load_model, predict_probability  # Your local script
-    print("✅ Step 1 complete: Module imported successfully")
-    
-    print("📍 Step 2: Loading model (this may take 30-60 seconds)...")
-    ml_components = load_model()  # Returns (model, tokenizer)
-    
-    if ml_components:
-        print("✅ Step 2 complete: Model load returned components")
-        ml_model, ml_tokenizer = ml_components
-        
-        # Suggestion 1: Set custom labels for better debugging
-        ml_model.config.id2label = {0: 'Negative', 1: 'Positive'}
-        ml_model.config.label2id = {'Negative': 0, 'Positive': 1}
-        
-        print(f"✅ ML SUCCESS: Custom BERT Model loaded successfully")
-        logging.info("BERT model loaded with custom labels: Negative=0, Positive=1")
-    else:
-        print("⚠️  ML WARNING: BERT model returned None (model not found or loading failed)")
-        logging.warning("BERT model load failed - returned None")
-        ml_model, ml_tokenizer = None, None
-        
-except ImportError as e:
-    print(f"❌ ML CRITICAL: ImportError - Could not find 'predict_today.py'")
-    print(f"   Error details: {str(e)}")
-    print(f"   Searched in: {CODE_DIR}")
-    logging.error(f"BERT import failed: {str(e)}")
-    traceback.print_exc()
-    ml_model, ml_tokenizer = None, None
-    
-except Exception as e:
-    print(f"❌ ML CRITICAL: Unexpected error during model loading")
-    print(f"   Error type: {type(e).__name__}")
-    print(f"   Error message: {str(e)}")
-    logging.error(f"BERT loading failed: {str(e)}")
-    traceback.print_exc()
-    ml_model, ml_tokenizer = None, None
-
-print("="*60)
-if ml_model and ml_tokenizer:
-    print("✅ Backend ready with ML capabilities")
-else:
-    print("⚠️  Backend ready but ML features disabled")
-print("="*60 + "\n")
-    
+# --- Initialize Flask FIRST (before ML model) ---
 app = Flask(__name__, template_folder=os.path.join(CURRENT_DIR, 'templates'), static_folder=os.path.join(CURRENT_DIR, 'static'))
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -118,6 +63,51 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 CORS(app)
+
+print("✅ Flask app initialized and ready to bind to port\n")
+
+import threading
+
+# --- Initialize global ML variables ---
+ml_model = None
+ml_tokenizer = None
+predict_probability = None
+ml_loading_complete = False
+
+def load_bert_async():
+    """Load BERT model in background thread"""
+    global ml_model, ml_tokenizer, predict_probability, ml_loading_complete
+    
+    print("\n⏳ Background: Loading BERT model...")
+    try:
+        from predict_today import load_model, predict_probability as predict_func
+        print("✅ Background: Module imported")
+        
+        ml_components = load_model()
+        if ml_components:
+            ml_model, ml_tokenizer = ml_components
+            ml_model.config.id2label = {0: 'Negative', 1: 'Positive'}
+            ml_model.config.label2id = {'Negative': 0, 'Positive': 1}
+            predict_probability = predict_func
+            print("✅ Background: BERT model loaded successfully")
+            logging.info("BERT model loaded in background")
+        else:
+            print("⚠️  Background: Model returned None")
+            
+    except Exception as e:
+        print(f"⚠️  Background: Model load failed: {str(e)}")
+        logging.error(f"BERT loading failed: {str(e)}")
+    finally:
+        ml_loading_complete = True
+        print("✅ Background: Model loading complete (or failed gracefully)")
+
+# Start loading BERT in background immediately (non-blocking)
+print("\n" + "="*60)
+print("🚀 Starting BERT model load in background thread...")
+print("="*60)
+bert_thread = threading.Thread(target=load_bert_async, daemon=True)
+bert_thread.start()
+print("✅ Background thread started - app will start immediately\n")
 
 with app.app_context():
     db.create_all()
@@ -648,6 +638,17 @@ def delete_user(current_user, user_id):
 def get_logs(current_user):
     logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(100).all()
     return jsonify({'logs': [l.to_dict() for l in logs]}), 200
+
+@app.route('/', methods=['GET'])
+def index():
+    """Root endpoint - responds immediately to confirm app is running"""
+    return jsonify({
+        'status': 'ok',
+        'message': 'Sales Feedback System API is running',
+        'version': '1.0',
+        'ml_model': 'loaded' if ml_model else 'not_loaded',
+        'chatbot': 'available' if chat_client else 'unavailable'
+    }), 200
 
 @app.route('/health', methods=['GET'])
 def health_check():
