@@ -19,27 +19,27 @@ def load_model():
     global sentiment_pipeline, zero_shot_pipeline
     
     if sentiment_pipeline is None:
-        print("⏳ Loading Sentiment Analysis Model (DistilBERT)...")
-        # distilbert-base-uncased-finetuned-sst-2-english:
-        # - Fast (DistilBERT is 40% smaller than BERT)
-        # - Accurate for general sentiment (customer feedback)
-        # - Finetuned on SST-2 (movie reviews)
+        print("⏳ Loading Sentiment Analysis Model (Twitter RoBERTa)...")
+        # cardiffnlp/twitter-roberta-base-sentiment-latest:
+        # - Trained on tweets (similar to sales feedback: short, informal, slang)
+        # - Better at detecting neutral comments in business context
+        # - Outputs: 'positive', 'neutral', 'negative'
         sentiment_pipeline = pipeline(
             "sentiment-analysis",
-            model="distilbert-base-uncased-finetuned-sst-2-english",
+            model="cardiffnlp/twitter-roberta-base-sentiment-latest",
             device=-1  # CPU
         )
         print("✅ Sentiment model loaded")
     
     if zero_shot_pipeline is None:
-        print("⏳ Loading Lead Quality Model (BART Zero-Shot)...")
-        # facebook/bart-large-mnli:
-        # - Zero-shot classification (no need to retrain)
-        # - Excellent for lead quality detection
-        # - Can classify: "high-value lead", "sales-ready", "nurture", "low-priority"
+        print("⏳ Loading Lead Quality Model (DeBERTa v3)...")
+        # MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli:
+        # - SOTA (State of the Art) for zero-shot classification
+        # - Smarter at understanding lead quality vs just "interested"
+        # - Better relationship understanding than BART
         zero_shot_pipeline = pipeline(
             "zero-shot-classification",
-            model="facebook/bart-large-mnli",
+            model="MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
             device=-1  # CPU
         )
         print("✅ Lead quality model loaded")
@@ -73,15 +73,18 @@ def predict_probability(model_tuple, text):
         # Get sentiment prediction
         result = sentiment_pipe(text[:512])[0]  # Limit to 512 tokens
         
-        # result = {'label': 'POSITIVE' or 'NEGATIVE', 'score': 0.9999}
-        label = result['label']
+        # Twitter RoBERTa outputs lowercase labels: 'positive', 'neutral', 'negative'
+        # Sometimes outputs Label_0, Label_1, Label_2
+        label = result['label'].lower()
         score = result['score']
         
-        # Convert to 0-1 scale: POSITIVE=1, NEGATIVE=0
-        if label == 'POSITIVE':
+        # Handle different label formats
+        if 'positive' in label or 'label_0' in label:
             return float(score)
-        else:
+        elif 'negative' in label or 'label_2' in label:
             return float(1.0 - score)
+        else:  # neutral or label_1
+            return 0.5
             
     except Exception as e:
         print(f"❌ Sentiment prediction error: {str(e)}")

@@ -339,14 +339,22 @@ def analyze_feedback(current_user):
     if not text:
         return jsonify({'error': 'Feedback text is required'}), 400
 
-    blob = TextBlob(text)
-    sentiment_score = blob.sentiment.polarity
-    
-    if sentiment_score > 0.2:
-        sentiment_label = "Positive"
-    elif sentiment_score < -0.1:
-        sentiment_label = "Negative"
+    # --- USING SENTIMENT PIPELINE (AI) ---
+    if sentiment_pipeline:
+        # Use the global sentiment_pipeline with predict_probability helper
+        sentiment_score = predict_probability((sentiment_pipeline, zero_shot_pipeline), text)
+        
+        # Custom thresholds
+        if sentiment_score > 0.6:
+            sentiment_label = "Positive"
+        elif sentiment_score < 0.4:
+            sentiment_label = "Negative"
+        else:
+            sentiment_label = "Neutral"
     else:
+        # Fallback if AI isn't ready yet
+        blob = TextBlob(text)
+        sentiment_score = (blob.sentiment.polarity + 1) / 2
         sentiment_label = "Neutral"
 
     new_entry = Feedback(salesperson_id=current_user.id, text=text, sentiment_score=sentiment_score, sentiment_label=sentiment_label, status='feedback')
@@ -497,14 +505,17 @@ def predict_lead_standalone(current_user):
     if not text:
         return jsonify({'error': 'No text provided'}), 400
     
-    if not ml_model:
-        return jsonify({'error': 'ML model not loaded'}), 503
+    # --- CHECK CORRECT GLOBAL VARIABLES ---
+    if not sentiment_pipeline or not zero_shot_pipeline:
+        return jsonify({'error': 'ML models loading...'}), 503
 
     try:
-        score = predict_probability((ml_model, ml_tokenizer), text)
-        if score >= 0.75:
+        # --- USE predict_lead_quality (NOT predict_probability) ---
+        score = predict_lead_quality((sentiment_pipeline, zero_shot_pipeline), text)
+        
+        if score >= 0.7:
             label = "High"
-        elif score >= 0.45:
+        elif score >= 0.4:
             label = "Medium"
         else:
             label = "Low"
