@@ -1,142 +1,159 @@
 """
-Ultra-Lightweight Sentiment & Lead Quality using Hugging Face
-- MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33: ~100MB ultra-compact
-  Does sentiment AND lead quality classification
-- Perfect fit for 512MB Render free tier
+Zero Local Models - Pure Hugging Face API Inference
+- No torch, no transformers, no RAM usage
+- All models run on HF servers
+- Fast, scalable, perfect for Render free tier
 """
 
-from transformers import pipeline
+import os
+import json
+from huggingface_hub import InferenceClient
+from textblob import TextBlob
 
-# Global model instance (lazy loaded)
-zero_shot_pipeline = None
+HF_TOKEN = os.environ.get('HF_TOKEN')
+
+# Zero-shot classification API for lead quality
+LEAD_QUALITY_API = "https://api-inference.huggingface.co/models/facebook/bart-large-mnli"
 
 def load_model():
     """
-    Load ultra-lightweight DeBERTa-v3-xsmall for ALL classification tasks
-    Returns: (zero_shot_pipeline, None)
+    Dummy function - returns True so Flask thinks model is loaded
+    Actually uses cloud APIs, not local models
     """
-    global zero_shot_pipeline
-    
-    if zero_shot_pipeline is None:
-        print("⏳ Loading Classification Model (DeBERTa-v3-xsmall)...")
-        # MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33:
-        # - Ultra-lightweight (~100MB)
-        # - Can handle sentiment, lead quality, any zero-shot task
-        # - SOTA quality despite tiny size
-        zero_shot_pipeline = pipeline(
-            "zero-shot-classification",
-            model="MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33",
-            device=-1  # CPU
-        )
-        print("✅ Classification model loaded")
-    
-    return (zero_shot_pipeline, None)
+    print("✅ Using Cloud APIs (Zero local models, zero RAM usage)")
+    return (True, True)
 
 
-def predict_probability(model_tuple, text):
+def predict_lead_quality(mock_tuple_ignored, text):
     """
-    Predict sentiment using zero-shot classification
+    Predict lead quality using Hugging Face API.
+    No local RAM usage - runs on HF servers.
     
     Args:
-        model_tuple: (zero_shot_pipeline, None)
-        text: string to analyze
-    
-    Returns:
-        float: 0.0 to 1.0 (0=Negative, 1=Positive)
-    """
-    zero_shot_pipe, _ = model_tuple
-    
-    if zero_shot_pipe is None:
-        print("⚠️  Model not loaded, returning neutral score")
-        return 0.5
-    
-    try:
-        text = str(text).strip()
-        if not text:
-            return 0.5
-        
-        # Sentiment classification
-        candidate_labels = ["positive sentiment", "negative sentiment"]
-        result = zero_shot_pipe(text[:512], candidate_labels)
-        
-        print(f"🔍 Sentiment result: {result}")
-        
-        if not result.get('scores'):
-            return 0.5
-            
-        top_label = result['labels'][0]
-        top_score = result['scores'][0]
-        
-        # If top label is positive, return score. If negative, return 1-score
-        if "positive" in top_label.lower():
-            return float(top_score)
-        else:
-            return float(1.0 - top_score)
-            
-    except Exception as e:
-        print(f"❌ Sentiment prediction error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return 0.5
-
-
-def predict_lead_quality(model_tuple, text):
-    """
-    Predict lead quality using zero-shot classification
-    
-    Args:
-        model_tuple: (zero_shot_pipeline, None)
-        text: lead description
+        mock_tuple_ignored: Ignored (for compatibility)
+        text: Lead description
     
     Returns:
         float: 0.0 to 1.0 score
     """
-    zero_shot_pipe, _ = model_tuple
-    
-    if zero_shot_pipe is None:
-        print("⚠️  Model not loaded, returning neutral")
+    if not text or not text.strip():
         return 0.5
     
+    # Try API first
+    if HF_TOKEN:
+        try:
+            client = InferenceClient(token=HF_TOKEN)
+            response = client.post(
+                json={
+                    "inputs": text,
+                    "parameters": {"candidate_labels": ["high value sales deal", "medium quality lead", "low priority inquiry"]}
+                },
+                model=LEAD_QUALITY_API
+            )
+            
+            # Response format:
+            # {'labels': ['high value sales deal', 'medium quality lead', 'low priority inquiry'], 
+            #  'scores': [0.85, 0.10, 0.05]}
+            data = json.loads(response.decode())
+            
+            top_label = data['labels'][0]
+            score = data['scores'][0]
+            
+            print(f"🔍 Lead Quality API result: {top_label} ({score:.2f})")
+            
+            # Map to 0-1 scale
+            if "high" in top_label.lower():
+                return float(score)
+            elif "medium" in top_label.lower():
+                return float(0.5 + (score * 0.25))
+            else:  # low priority
+                return float(score * 0.45)
+                
+        except Exception as e:
+            print(f"⚠️  Lead Quality API Error: {e}. Falling back to heuristics.")
+    
+    # Fallback: Keyword + sentiment heuristics
+    text_lower = text.lower()
+    keywords = ['budget', 'urgent', 'approved', 'contract', 'buy', 'sign', 'deal', 'purchase', 'decision', 'ready']
+    
+    base_score = 0.3
+    for word in keywords:
+        if word in text_lower:
+            base_score += 0.15
+    
+    # Sentiment boost (excited people = better leads)
     try:
-        text = str(text).strip()
-        if not text:
-            return 0.5
-        
-        # Lead quality classification
-        candidate_labels = ["high-value sales lead", "medium-quality lead", "low-priority lead"]
-        result = zero_shot_pipe(text[:512], candidate_labels)
-        
-        print(f"🔍 Lead quality result: {result}")
-        
-        if not result.get('scores'):
-            return 0.5
+        analysis = TextBlob(text)
+        if analysis.sentiment.polarity > 0.3:
+            base_score += 0.1
+    except:
+        pass
+    
+    return min(base_score, 0.95)
+
+
+def predict_probability(mock_tuple_ignored, text):
+    """
+    Predict sentiment using Hugging Face API.
+    No local RAM usage - runs on HF servers.
+    
+    Args:
+        mock_tuple_ignored: Ignored (for compatibility)
+        text: Feedback text
+    
+    Returns:
+        float: 0.0 to 1.0 (0=Negative, 1=Positive)
+    """
+    if not text or not text.strip():
+        return 0.5
+    
+    # Try API for sentiment
+    if HF_TOKEN:
+        try:
+            client = InferenceClient(token=HF_TOKEN)
+            response = client.post(
+                json={
+                    "inputs": text,
+                    "parameters": {"candidate_labels": ["positive sentiment", "negative sentiment"]}
+                },
+                model=LEAD_QUALITY_API  # BART can do sentiment too
+            )
             
-        top_label = result['labels'][0]
-        top_score = result['scores'][0]
-        
-        # Map to 0-1 scale
-        if "high" in top_label.lower():
-            return float(top_score)
-        elif "medium" in top_label.lower():
-            return float(0.5 + (top_score * 0.25))
-        else:  # low-priority
-            return float(top_score * 0.45)
+            data = json.loads(response.decode())
+            top_label = data['labels'][0]
+            score = data['scores'][0]
             
-    except Exception as e:
-        print(f"❌ Lead quality prediction error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+            print(f"🔍 Sentiment API result: {top_label} ({score:.2f})")
+            
+            # Return positive score if positive, else invert
+            if "positive" in top_label.lower():
+                return float(score)
+            else:
+                return float(1.0 - score)
+                
+        except Exception as e:
+            print(f"⚠️  Sentiment API Error: {e}. Falling back to TextBlob.")
+    
+    # Fallback: TextBlob (fast, no ML required)
+    try:
+        blob = TextBlob(text)
+        # Normalize -1 to 1 -> 0 to 1
+        normalized = (blob.sentiment.polarity + 1) / 2
+        print(f"🔍 TextBlob sentiment: {normalized:.2f}")
+        return normalized
+    except:
         return 0.5
 
 
 def predict_lead_standalone(text):
     """
     Standalone prediction for lead quality (for testing)
+    Uses API, no local model needed.
+    
     Returns: dict with prediction details
     """
     try:
-        model_tuple = load_model()
-        probability = predict_lead_quality(model_tuple, text)
+        probability = predict_lead_quality((True, True), text)
         
         return {
             'text': text,
@@ -152,4 +169,5 @@ def predict_lead_standalone(text):
             'sentiment': 'Neutral',
             'confidence': 0.5
         }
+
 
