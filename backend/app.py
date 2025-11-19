@@ -69,43 +69,40 @@ print("✅ Flask app initialized and ready to bind to port\n")
 import threading
 
 # --- Initialize global ML variables ---
-ml_model = None
-ml_tokenizer = None
+sentiment_pipeline = None
 predict_probability = None
 ml_loading_complete = False
 
-def load_bert_async():
-    """Load BERT model in background thread"""
-    global ml_model, ml_tokenizer, predict_probability, ml_loading_complete
+def load_sentiment_model_async():
+    """Load pretrained DistilBERT in background thread"""
+    global sentiment_pipeline, predict_probability, ml_loading_complete
     
-    print("\n⏳ Background: Loading BERT model...")
+    print("\n⏳ Background: Loading pretrained DistilBERT from Hugging Face...")
     try:
         from predict_today import load_model, predict_probability as predict_func
         print("✅ Background: Module imported")
         
         ml_components = load_model()
         if ml_components:
-            ml_model, ml_tokenizer = ml_components
-            ml_model.config.id2label = {0: 'Negative', 1: 'Positive'}
-            ml_model.config.label2id = {'Negative': 0, 'Positive': 1}
+            sentiment_pipeline, _ = ml_components
             predict_probability = predict_func
-            print("✅ Background: BERT model loaded successfully")
-            logging.info("BERT model loaded in background")
+            print("✅ Background: Sentiment model loaded successfully")
+            logging.info("Sentiment model loaded in background")
         else:
             print("⚠️  Background: Model returned None")
             
     except Exception as e:
         print(f"⚠️  Background: Model load failed: {str(e)}")
-        logging.error(f"BERT loading failed: {str(e)}")
+        logging.error(f"Model loading failed: {str(e)}")
     finally:
         ml_loading_complete = True
-        print("✅ Background: Model loading complete (or failed gracefully)")
+        print("✅ Background: Model loading complete\n")
 
-# Start loading BERT in background immediately (non-blocking)
+# Start loading model in background immediately (non-blocking)
 print("\n" + "="*60)
-print("🚀 Starting BERT model load in background thread...")
+print("🚀 Starting sentiment model load in background thread...")
 print("="*60)
-bert_thread = threading.Thread(target=load_bert_async, daemon=True)
+bert_thread = threading.Thread(target=load_sentiment_model_async, daemon=True)
 bert_thread.start()
 print("✅ Background thread started - app will start immediately\n")
 
@@ -303,10 +300,10 @@ def submit_lead(current_user):
     
     lead_score = None
     lead_label = None
-    if ml_model and ml_tokenizer and predict_probability:
+    if sentiment_pipeline and predict_probability:
         try:
-            lead_score = predict_probability((ml_model, ml_tokenizer), text)  # Pass tuple
-            # Suggestion 3: Tuned thresholds (Medium starts at 0.3 for borderline positives)
+            lead_score = predict_probability((sentiment_pipeline, None), text)
+            # Tuned thresholds (Medium starts at 0.3 for borderline positives)
             if lead_score >= 0.75:
                 lead_label = "High"
             elif lead_score >= 0.3:  # Lowered from 0.45
@@ -413,7 +410,7 @@ def chat(current_user):
 @app.route('/api/validate-leads', methods=['POST'])
 @token_required
 def validate_leads(current_user):
-    if not ml_model or not ml_tokenizer or not predict_probability:
+    if not sentiment_pipeline or not predict_probability:
         return jsonify({'error': 'ML model unavailable'}), 503
 
     data = request.get_json()
@@ -430,7 +427,7 @@ def validate_leads(current_user):
         key_phrase = parts[0].strip() if len(parts) > 0 else lead.strip()
         
         try:
-            score = predict_probability((ml_model, ml_tokenizer), key_phrase)
+            score = predict_probability((sentiment_pipeline, None), key_phrase)
             label = "High" if score >= 0.75 else "Medium" if score >= 0.3 else "Low"
             logging.info(f"Validated lead snippet scored: {score:.4f} -> {label}")
 
