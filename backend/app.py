@@ -13,6 +13,8 @@ import sys
 import random
 from textblob import TextBlob
 import time
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- HUGGING FACE SETUP (Mistral 7B) ---
 from huggingface_hub import InferenceClient
@@ -47,18 +49,29 @@ if CODE_DIR not in sys.path:
     sys.path.append(CODE_DIR)
 
 # --- NEW BERT MODEL INTEGRATION ---
+# --- NEW BERT MODEL INTEGRATION ---
 try:
-    from predict_today import load_model, predict_probability
-    ml_model = load_model()
-    if ml_model:
+    from predict_today import load_model, predict_probability  # Your local script
+    ml_components = load_model()  # Returns (model, tokenizer)
+    if ml_components:
+        ml_model, ml_tokenizer = ml_components
+        
+        # Suggestion 1: Set custom labels for better debugging
+        ml_model.config.id2label = {0: 'Negative', 1: 'Positive'}
+        ml_model.config.label2id = {'Negative': 0, 'Positive': 1}
+        
         print(f"✅ ML SUCCESS: Custom BERT Model loaded successfully")
+        logging.info("BERT model loaded with custom labels: Negative=0, Positive=1")
     else:
         print("⚠️  ML WARNING: BERT model failed to load.")
+        logging.warning("BERT model load failed")
+        ml_model, ml_tokenizer = None, None
 except ImportError as e:
     print(f"❌ ML CRITICAL: Could not find 'predict_today.py' in {CODE_DIR}")
     print(f"Error: {str(e)}")
-    ml_model, predict_probability = None, None
-
+    logging.error(f"BERT import failed: {str(e)}")
+    ml_model, ml_tokenizer = None, None
+    
 app = Flask(__name__, template_folder=os.path.join(CURRENT_DIR, 'templates'), static_folder=os.path.join(CURRENT_DIR, 'static'))
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -267,17 +280,20 @@ def submit_lead(current_user):
     
     lead_score = None
     lead_label = None
-    if ml_model and predict_probability:
+    if ml_model and ml_tokenizer and predict_probability:
         try:
-            lead_score = predict_probability(ml_model, text)
+            lead_score = predict_probability((ml_model, ml_tokenizer), text)  # Pass tuple
+            # Suggestion 3: Tuned thresholds (Medium starts at 0.3 for borderline positives)
             if lead_score >= 0.75:
                 lead_label = "High"
-            elif lead_score >= 0.45:
+            elif lead_score >= 0.3:  # Lowered from 0.45
                 lead_label = "Medium"
             else:
                 lead_label = "Low"
+            logging.info(f"Lead scored: {lead_score:.4f} -> {lead_label}")
         except Exception as e:
             print(f"❌ ML Prediction failed: {e}")
+            logging.error(f"Lead prediction error: {str(e)}")
             lead_score = 0.0
             lead_label = "Error"
 
@@ -374,32 +390,27 @@ def chat(current_user):
 @app.route('/api/validate-leads', methods=['POST'])
 @token_required
 def validate_leads(current_user):
-    if not ml_model or not predict_probability:
+    if not ml_model or not ml_tokenizer or not predict_probability:
         return jsonify({'error': 'ML model unavailable'}), 503
-    
+
     data = request.get_json()
-    leads_text = data.get('leads_text', '') 
+    leads_text = data.get('leads_text', '')
     
     if not leads_text:
         return jsonify({'error': 'No leads provided'}), 400
     
-    lead_matches = re.findall(r'- Lead \d+: (.*?)(?=\n- Lead|\Z)', leads_text, re.DOTALL)
-    
+    lead_matches = re.findall(r'[-•*]\s+(.+)', leads_text)
     validated = []
-    if not lead_matches:
-         lead_matches = [line for line in leads_text.split('\n') if line.strip() and len(line) > 20]
-
+    
     for lead in lead_matches:
         parts = lead.split('|')
-        if len(parts) >= 3:
-             key_phrase = parts[2].strip()
-        else:
-             key_phrase = lead.strip()
-
+        key_phrase = parts[0].strip() if len(parts) > 0 else lead.strip()
+        
         try:
-            score = predict_probability(ml_model, key_phrase)
-            label = "High" if score >= 0.75 else "Medium" if score >= 0.45 else "Low"
-            
+            score = predict_probability((ml_model, ml_tokenizer), key_phrase)
+            label = "High" if score >= 0.75 else "Medium" if score >= 0.3 else "Low"
+            logging.info(f"Validated lead snippet scored: {score:.4f} -> {label}")
+
             validated.append({
                 'lead_snippet': lead.strip()[:100] + '...',
                 'score': score,
@@ -408,6 +419,7 @@ def validate_leads(current_user):
             })
         except Exception as e:
             print(f"Error scoring lead segment: {e}")
+            logging.error(f"Lead validation error: {str(e)}")
             continue
     
     high_quality = [v for v in validated if v['label'] == 'High']

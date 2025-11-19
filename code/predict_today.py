@@ -1,55 +1,106 @@
 import os
-import requests
+import torch
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from optimum.quanto import quantize, qint8  # For quantization on load
+import time
 
-# 1. Get Token
-HF_TOKEN = os.environ.get('HF_TOKEN')
-
-# 2. Point to YOUR Hosted Model
-# This is the exact repo from your screenshot
-MODEL_REPO = "kaizen696/my_lead_model"
-API_URL = f"https://api-inference.huggingface.co/models/{MODEL_REPO}"
+# Configuration
+MODEL_PATH = "./quantized_lead_model"  # Local path to your quantized model
+HF_TOKEN = os.environ.get('HF_TOKEN')  # Optional: If model/tokenizer needs it
 
 def load_model():
-    # We don't need to load anything locally!
-    if not HF_TOKEN:
-        print("❌ Error: HF_TOKEN not found.")
+    """
+    Loads the local quantized model and tokenizer.
+    Validates setup and returns model/tokenizer pair.
+    """
+    if not os.path.exists(MODEL_PATH):
+        print(f"❌ Error: Model path '{MODEL_PATH}' not found. Run quantization script first.")
         return None
-    print(f"✅ Using Hosted Model: {MODEL_REPO}")
-    return True 
-
-def predict_probability(model, text):
-    """
-    Sends text to your hosted Hugging Face model.
-    """
-    if not HF_TOKEN: return 0.0
-
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {"inputs": text}
-
+    
+    print(f"✅ Loading local model from: {MODEL_PATH}")
     try:
-        # Call the API
-        response = requests.post(API_URL, headers=headers, json=payload)
-        result = response.json()
-
-        # Handle model loading state (503 error)
-        if 'error' in result and 'loading' in result['error']:
-            print("⏳ Model is loading on HF servers... waiting...")
-            return 0.0 # Or retry logic
-
-        # Parse the result
-        # Your model likely returns: [[{'label': 'LABEL_1', 'score': 0.99}, ...]]
-        if isinstance(result, list) and len(result) > 0:
-            scores = result[0] 
-            
-            # Find the Positive Score
-            # You trained it, so check if 'LABEL_1' or 'High' is the positive one.
-            # Assuming 'LABEL_1' based on standard training.
-            for item in scores:
-                if item['label'] in ['LABEL_1', 'POSITIVE', 'High']:
-                    return float(item['score'])
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, token=HF_TOKEN)
+        model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH, token=HF_TOKEN)
         
-        return 0.0
-
+        # Re-quantize to restore int8 weights (fast, ~1s)
+        quantize(model, weights=qint8)
+        
+        print("✅ Model and tokenizer loaded + quantized successfully!")
+        print(f"   Model type: {type(model).__name__}")
+        print(f"   Device: {'CUDA' if torch.cuda.is_available() else 'CPU'}")
+        return model, tokenizer
     except Exception as e:
-        print(f"❌ HF API Error: {e}")
+        print(f"❌ Load failed: {e}")
+        print("💡 Tip: Ensure pip install transformers optimum[quanto] torch")
+        return None
+
+def predict_probability(model_tokenizer, text, max_retries=2):
+    """
+    Runs local inference on the loaded model.
+    Returns probability score for positive class (LABEL_1, per test results).
+    """
+    model, tokenizer = model_tokenizer
+    if model is None:
+        print("❌ No model loaded")
         return 0.0
+    
+    if not text or len(text.strip()) == 0:
+        print("⚠️  Empty text provided")
+        return 0.0
+    
+    for attempt in range(max_retries):
+        try:
+            # Tokenize input
+            inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+            
+            # Inference
+            with torch.no_grad():
+                outputs = model(**inputs)
+                logits = outputs.logits
+                probs = torch.softmax(logits, dim=1)
+                score = probs[0][1].item()  # LABEL_1 as positive (66.7% acc from tests)
+            
+            print(f"✅ Score: {score:.4f}")
+            return score
+            
+        except torch.cuda.OutOfMemoryError:
+            print("⏱️  OOM error—falling back to CPU")
+            model.to('cpu')
+            time.sleep(1)
+            continue
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(5)
+                continue
+            return 0.0
+    
+    return 0.0
+
+# Test function
+def test_prediction():
+    print("\n" + "="*60)
+    print("Testing Local Quantized Model Inference")
+    print("="*60)
+    
+    model_tokenizer = load_model()
+    if not model_tokenizer:
+        print("❌ Setup failed")
+        return
+    
+    test_texts = [
+        "Budget approved, ready to sign next week!",
+        "Just browsing, not interested right now.",
+        "CEO loves the demo, wants to schedule implementation call."
+    ]
+    
+    for text in test_texts:
+        print(f"\n{'='*60}")
+        print(f"Text: '{text}'")
+        print("-"*60)
+        score = predict_probability(model_tokenizer, text)
+        label = "High" if score >= 0.75 else "Medium" if score >= 0.45 else "Low"
+        print(f"Final: {score:.4f} | {label}")
+
+if __name__ == "__main__":
+    test_prediction()
