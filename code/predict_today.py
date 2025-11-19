@@ -101,7 +101,7 @@ def predict_lead_quality(model_tuple, text):
         text: lead description
     
     Returns:
-        dict: {'score': 0-1, 'label': 'High'/'Medium'/'Low', 'confidence': 0-1}
+        float: 0.0 to 1.0 score
     """
     _, zero_shot_pipe = model_tuple
     
@@ -120,25 +120,42 @@ def predict_lead_quality(model_tuple, text):
         # Zero-shot classification
         result = zero_shot_pipe(text[:512], candidate_labels)
         
+        # Debug: print result structure
+        print(f"🔍 Zero-shot result: {result}")
+        
         # result = {
         #     'sequence': text,
         #     'labels': ['high-value sales lead', 'medium-quality lead', 'low-priority lead'],
         #     'scores': [0.85, 0.10, 0.05]
         # }
         
-        top_label = result['labels'][0]
-        top_score = result['scores'][0]
+        if not result.get('scores') or len(result['scores']) == 0:
+            print("⚠️  No scores returned from zero-shot model")
+            return 0.5
+            
+        top_label = result['labels'][0] if result.get('labels') else ""
+        top_score = result['scores'][0] if result.get('scores') else 0.5
         
-        # Map to 0-1 scale
+        print(f"📊 Top label: {top_label}, Score: {top_score}")
+        
+        # Map to 0-1 scale based on label
         if "high" in top_label.lower():
-            return float(top_score)  # 0.75-1.0
+            final_score = float(top_score)
+            print(f"✅ High-value lead detected: {final_score}")
+            return final_score
         elif "medium" in top_label.lower():
-            return float(0.5 + (top_score * 0.25))  # 0.45-0.75
-        else:
-            return float(top_score * 0.45)  # 0.0-0.45
+            final_score = float(0.5 + (top_score * 0.25))
+            print(f"📌 Medium lead detected: {final_score}")
+            return final_score
+        else:  # low-priority
+            final_score = float(top_score * 0.45)
+            print(f"❌ Low-priority lead detected: {final_score}")
+            return final_score
             
     except Exception as e:
         print(f"❌ Lead quality prediction error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return 0.5
 
 

@@ -306,7 +306,10 @@ def submit_lead(current_user):
     lead_label = None
     if sentiment_pipeline and zero_shot_pipeline and predict_lead_quality:
         try:
+            print(f"\n🔍 DEBUG: Calling predict_lead_quality with text: {text[:100]}")
             lead_score = predict_lead_quality((sentiment_pipeline, zero_shot_pipeline), text)
+            print(f"✅ DEBUG: Got lead_score = {lead_score}")
+            
             # Thresholds based on zero-shot lead quality classification
             if lead_score >= 0.7:
                 lead_label = "High"
@@ -317,9 +320,13 @@ def submit_lead(current_user):
             logging.info(f"Lead scored: {lead_score:.4f} -> {lead_label}")
         except Exception as e:
             print(f"❌ ML Prediction failed: {e}")
+            import traceback
+            traceback.print_exc()
             logging.error(f"Lead prediction error: {str(e)}")
             lead_score = 0.0
             lead_label = "Error"
+    else:
+        print(f"⚠️  DEBUG: Models not loaded yet. sentiment_pipeline={bool(sentiment_pipeline)}, zero_shot_pipeline={bool(zero_shot_pipeline)}, predict_lead_quality={bool(predict_lead_quality)}")
 
     new_entry = Feedback(salesperson_id=current_user.id, text=text, lead_score=lead_score, lead_label=lead_label, status='lead')
     
