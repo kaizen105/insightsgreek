@@ -6,7 +6,6 @@ gunicorn
 pandas
 scikit-learn
 joblib
-nltk
 textblob
 huggingface_hub
 psycopg2-binary
