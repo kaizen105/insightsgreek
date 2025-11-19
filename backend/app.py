@@ -14,6 +14,7 @@ import random
 from textblob import TextBlob
 import time
 import logging
+import traceback
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- HUGGING FACE SETUP (Mistral 7B) ---
@@ -50,10 +51,24 @@ if CODE_DIR not in sys.path:
 
 # --- NEW BERT MODEL INTEGRATION ---
 # --- NEW BERT MODEL INTEGRATION ---
+print("\n" + "="*60)
+print("⏳ Attempting to load BERT model...")
+print("="*60)
+
+ml_model = None
+ml_tokenizer = None
+predict_probability = None
+
 try:
+    print("📍 Step 1: Importing predict_today module...")
     from predict_today import load_model, predict_probability  # Your local script
+    print("✅ Step 1 complete: Module imported successfully")
+    
+    print("📍 Step 2: Loading model (this may take 30-60 seconds)...")
     ml_components = load_model()  # Returns (model, tokenizer)
+    
     if ml_components:
+        print("✅ Step 2 complete: Model load returned components")
         ml_model, ml_tokenizer = ml_components
         
         # Suggestion 1: Set custom labels for better debugging
@@ -63,14 +78,32 @@ try:
         print(f"✅ ML SUCCESS: Custom BERT Model loaded successfully")
         logging.info("BERT model loaded with custom labels: Negative=0, Positive=1")
     else:
-        print("⚠️  ML WARNING: BERT model failed to load.")
-        logging.warning("BERT model load failed")
+        print("⚠️  ML WARNING: BERT model returned None (model not found or loading failed)")
+        logging.warning("BERT model load failed - returned None")
         ml_model, ml_tokenizer = None, None
+        
 except ImportError as e:
-    print(f"❌ ML CRITICAL: Could not find 'predict_today.py' in {CODE_DIR}")
-    print(f"Error: {str(e)}")
+    print(f"❌ ML CRITICAL: ImportError - Could not find 'predict_today.py'")
+    print(f"   Error details: {str(e)}")
+    print(f"   Searched in: {CODE_DIR}")
     logging.error(f"BERT import failed: {str(e)}")
+    traceback.print_exc()
     ml_model, ml_tokenizer = None, None
+    
+except Exception as e:
+    print(f"❌ ML CRITICAL: Unexpected error during model loading")
+    print(f"   Error type: {type(e).__name__}")
+    print(f"   Error message: {str(e)}")
+    logging.error(f"BERT loading failed: {str(e)}")
+    traceback.print_exc()
+    ml_model, ml_tokenizer = None, None
+
+print("="*60)
+if ml_model and ml_tokenizer:
+    print("✅ Backend ready with ML capabilities")
+else:
+    print("⚠️  Backend ready but ML features disabled")
+print("="*60 + "\n")
     
 app = Flask(__name__, template_folder=os.path.join(CURRENT_DIR, 'templates'), static_folder=os.path.join(CURRENT_DIR, 'static'))
 
@@ -477,7 +510,7 @@ def predict_lead_standalone(current_user):
         return jsonify({'error': 'ML model not loaded'}), 503
 
     try:
-        score = predict_probability(ml_model, text)
+        score = predict_probability((ml_model, ml_tokenizer), text)
         if score >= 0.75:
             label = "High"
         elif score >= 0.45:
@@ -618,7 +651,17 @@ def get_logs(current_user):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat(), 'services': {'database': 'connected' if db else 'disconnected', 'ml_model': 'loaded' if ml_model else 'not_loaded', 'chatbot': 'available' if chat_client else 'unavailable'}}), 200
+    status = {
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'services': {
+            'database': 'connected' if db else 'disconnected',
+            'ml_model': 'loaded' if ml_model else 'not_loaded',
+            'chatbot': 'available' if chat_client else 'unavailable'
+        }
+    }
+    print(f"✅ Health check requested: {status}")
+    return jsonify(status), 200
 
 @app.errorhandler(404)
 def not_found(error):
@@ -633,21 +676,44 @@ def internal_error(error):
 def forbidden(error):
     return jsonify({'error': 'Access forbidden'}), 403
 
+print("\n🚀 Flask application initialized successfully!\n")
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    
-    port = int(os.environ.get('PORT', 5000))
-    debug_mode = os.environ.get('FLASK_ENV') != 'production'
-    
-    print(f"\n{'='*50}")
-    print(f"🚀 Starting Flask Application")
-    print(f"{'='*50}")
-    print(f"Environment: {'Production' if not debug_mode else 'Development'}")
-    print(f"Port: {port}")
-    print(f"Database: {'PostgreSQL' if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else 'SQLite'}")
-    print(f"ML Model: {'✅ Loaded (BERT)' if ml_model else '❌ Not Loaded'}")
-    print(f"Chatbot: {'✅ Available' if chat_client else '❌ Unavailable'}")
-    print(f"{'='*50}\n")
-    
-    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    try:
+        print("\n" + "="*60)
+        print("🚀 Starting Flask Application")
+        print("="*60)
+        
+        with app.app_context():
+            print("📍 Creating database tables...")
+            db.create_all()
+            print("✅ Database ready")
+        
+        port = int(os.environ.get('PORT', 5000))
+        debug_mode = os.environ.get('FLASK_ENV') != 'production'
+        
+        print(f"\n📊 Service Status:")
+        print(f"   Environment: {'Production' if not debug_mode else 'Development'}")
+        print(f"   Port: {port}")
+        print(f"   Database: {'PostgreSQL' if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI'] else 'SQLite'}")
+        print(f"   ML Model: {'✅ Loaded (BERT)' if ml_model else '❌ Not Loaded (graceful degradation)'}")
+        print(f"   Chatbot: {'✅ Available' if chat_client else '❌ Unavailable (graceful degradation)'}")
+        print("="*60 + "\n")
+        
+        print("✅ READY TO ACCEPT CONNECTIONS")
+        print(f"📡 Listening on 0.0.0.0:{port}\n")
+        
+        app.run(host='0.0.0.0', port=port, debug=debug_mode)
+        
+    except Exception as e:
+        print("\n" + "="*60)
+        print("❌ FATAL ERROR - Application startup failed")
+        print("="*60)
+        print(f"Error Type: {type(e).__name__}")
+        print(f"Error Message: {str(e)}")
+        print("\nFull Traceback:")
+        traceback.print_exc()
+        print("="*60 + "\n")
+        logging.error(f"Application startup failed: {str(e)}")
+        logging.error(traceback.format_exc())
+        sys.exit(1)
