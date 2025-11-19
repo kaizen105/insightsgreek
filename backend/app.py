@@ -41,7 +41,7 @@ else:
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
-CODE_DIR = os.path.join(PROJECT_ROOT, 'code_ml')
+CODE_DIR = os.path.join(PROJECT_ROOT, 'code')
 CURRENT_DIR = BASE_DIR
 
 if PROJECT_ROOT not in sys.path: 
