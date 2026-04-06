@@ -280,6 +280,5 @@ The current production path calls the hosted model via Hugging Face Inference AP
 
 ---
 
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
+## Link
+https://insightscreek.onrender.com/
