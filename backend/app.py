@@ -128,6 +128,15 @@ bert_thread.start()
 print("✅ Background thread started - app will start immediately\n")
 
 with app.app_context():
+    try:
+        # Add missing columns if migrating an existing DB on Render
+        db.session.execute(db.text("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS sentiment_score FLOAT;"))
+        db.session.execute(db.text("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS sentiment_label VARCHAR(20);"))
+        db.session.execute(db.text("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS explanation VARCHAR(255);"))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+
     db.create_all()
     print("\n🌱 Checking database status...")
 
@@ -1143,16 +1152,6 @@ if __name__ == "__main__":
 
         with app.app_context():
             print("📍 Creating database tables...")
-            try:
-                # Add missing columns if migrating an existing DB on Render
-                db.session.execute(db.text("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS sentiment_score FLOAT;"))
-                db.session.execute(db.text("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS sentiment_label VARCHAR(20);"))
-                db.session.execute(db.text("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS explanation VARCHAR(255);"))
-                db.session.commit()
-            except Exception as e:
-                # Ignore errors for sqlite or if table doesn't exist yet
-                db.session.rollback()
-                
             db.create_all()
             print("✅ Database ready")
 
