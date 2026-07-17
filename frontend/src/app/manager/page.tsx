@@ -183,7 +183,7 @@ export default function ManagerDashboard() {
                 <div key={i} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-xs font-medium px-2 py-1 bg-white border border-gray-200 rounded-md text-gray-600">
-                      {item.type === 'lead' ? '🎯 Lead' : '💬 Feedback'}
+                      {item.status === 'lead' ? '🎯 Lead' : '💬 Feedback'}
                     </span>
                     <span className="text-xs text-gray-400">{item.time}</span>
                   </div>
@@ -191,11 +191,11 @@ export default function ManagerDashboard() {
                   <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
                     <span className="text-xs text-gray-500">User: <span className="font-semibold text-gray-700">{item.salesperson}</span></span>
                     <span className={`text-xs font-bold px-2 py-1 rounded-md ${
-                      (item.label?.includes('High') || item.label?.includes('Positive')) ? 'bg-green-100 text-green-700' :
-                      (item.label?.includes('Medium') || item.label?.includes('Neutral')) ? 'bg-amber-100 text-amber-700' :
+                      ((item.status === 'lead' ? item.lead_label : item.sentiment_label)?.includes('High') || (item.status === 'lead' ? item.lead_label : item.sentiment_label)?.includes('Positive')) ? 'bg-green-100 text-green-700' :
+                      ((item.status === 'lead' ? item.lead_label : item.sentiment_label)?.includes('Medium') || (item.status === 'lead' ? item.lead_label : item.sentiment_label)?.includes('Neutral')) ? 'bg-amber-100 text-amber-700' :
                       'bg-red-100 text-red-700'
                     }`}>
-                      {item.label || "Unknown"} ({(item.score * 100).toFixed(0)}%)
+                      {(item.status === 'lead' ? item.lead_label : item.sentiment_label) || "Unknown"} {((item.status === 'lead' ? item.lead_score : item.sentiment_score) != null) ? `(${((item.status === 'lead' ? item.lead_score : item.sentiment_score) * 100).toFixed(0)}%)` : ''}
                     </span>
                   </div>
                 </div>

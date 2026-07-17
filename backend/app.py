@@ -597,40 +597,51 @@ def chat(current_user):
     if not msg:
         return jsonify({"error": "No message"}), 400
 
-    system_role = f"You are an expert Sales Coach for a {current_user.role}. Be helpful, concise, and professional."
-
-    if "enhance" in msg_lower or "rewrite" in msg_lower:
-        system_role = """You are a CRM Data Analyst. 
-        Rewrite these sales notes to be professional, clear, and structured with bullet points. 
-        Return ONLY the rewritten notes."""
-
-    elif "suggest" in msg_lower or "lead" in msg_lower:
-        system_role = """You are a Lead Generation Engine.
-        The user wants 3 NEW, HIGH-QUALITY mock leads.
-        
-        CRITICAL: Write the 'Lead Note' using strong buying signals (e.g., 'budget approved', 'ready to sign').
-        
-        Format each lead EXACTLY like this:
-        - Lead 1: [Company Name] | [Role] | [High-Intent Note] | [Hook]
-        - Lead 2: [Company Name] | [Role] | [High-Intent Note] | [Hook]
-        - Lead 3: [Company Name] | [Role] | [High-Intent Note] | [Hook]"""
-
-    else:
-        system_role = f"""You are an expert "Closer" and sales coach.
-        The user is asking a question about these notes: "{context}"
-        Give 2-3 assertive, actionable steps to close the deal."""
+    system_role = f"""You are a helpful, conversational Sales AI Assistant for a {current_user.role}.
+    You should converse naturally, be helpful, and answer questions.
+    If the user explicitly asks you to generate, suggest, or find new LEADS, you MUST generate 3-5 leads and wrap them exactly inside this block:
+    [LEAD_BLOCK]
+    - [Company Name] | [Role] | [High-Intent Note] | [Hook]
+    - [Company Name] | [Role] | [High-Intent Note] | [Hook]
+    [/LEAD_BLOCK]
+    Do not use this block unless they explicitly ask for leads.
+    """
 
     try:
         completion = chat_client.chat_completion(
             messages=[
                 {"role": "system", "content": system_role},
-                {"role": "user", "content": f"Context: {context}\n\nRequest: {msg}"},
+                {"role": "user", "content": f"Context: {context}\n\nRequest: {msg}" if context else msg},
             ],
             max_tokens=600,
             temperature=0.7,
         )
 
         reply = completion.choices[0].message.content
+        
+        # Process generated leads if present
+        if "[LEAD_BLOCK]" in reply and "[/LEAD_BLOCK]" in reply:
+            block = re.search(r"\[LEAD_BLOCK\](.*?)\[/LEAD_BLOCK\]", reply, re.DOTALL)
+            if block:
+                lead_text = block.group(1).strip()
+                leads = [l.strip() for l in lead_text.split('\n') if l.strip().startswith("-")]
+                
+                high_tier_leads = []
+                for lead in leads:
+                    try:
+                        score, label = lead_quality_func(lead)
+                        if score >= 0.60: # High quality threshold
+                            high_tier_leads.append(f"{lead} \n  *-> ML Validation: {label} ({score * 100:.0f}% win probability)*")
+                    except Exception as e:
+                        print(f"Failed to score lead: {e}")
+                
+                if not high_tier_leads:
+                    replacement = "\n*I generated some leads, but our internal ML model flagged them as low quality. Please ask me to generate again with more specific criteria.*"
+                else:
+                    replacement = "\n**Here are the High-Tier leads validated by our ML model:**\n" + "\n\n".join(high_tier_leads)
+                
+                reply = reply[:block.start()] + replacement + reply[block.end():]
+
         return jsonify({"reply": reply})
 
     except Exception as e:
