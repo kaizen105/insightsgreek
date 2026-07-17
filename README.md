@@ -23,8 +23,8 @@ Access control is rigidly enforced via a **3-tier JWT authentication system** (D
 
 ## ✨ Key Features
 
-- 🎯 **AI Lead Scoring** — Automatically scores inbound leads with confidence percentages to identify high-value prospects instantly.
-- 💬 **Intelligent Chat Assistant (Fully Functional End-to-End)** — A persistent, floating AI Sales Coach chatbot built directly into the UI. It provides real-time pitch refinement, actionable next steps, and synthetic lead generation based on active user context, powered live by Qwen2.5.
+- 🎯 **AI Lead Scoring** — Automatically scores inbound leads with confidence percentages using a fine-tuned `DistilBERT` model to identify high-value prospects instantly.
+- 💬 **Intelligent Chat Assistant** — A persistent, floating AI Sales Coach chatbot built directly into the UI. Powered by Qwen2.5, it converses naturally, provides pitch refinement, and natively generates synthetic leads which are instantly validated by the local ML model before being returned to the user.
 - 📝 **Grammar & Feedback Analysis** — Processes raw customer feedback text for actionable sentiment classification (Positive/Neutral/Negative) and offers one-click grammar correction via LLM.
 - 🎨 **Dynamic UI/UX** — Fully responsive frontend built with **Next.js App Router** and **Tailwind CSS**. Features smooth page transitions, glassmorphism components, interactive gradients, and real-time form validation.
 - 🔒 **Role-Based Access Control (RBAC)** — Three distinct tiers of access:
@@ -48,10 +48,10 @@ graph TD
     end
     
     subgraph Backend [Flask Server]
-        Auth[JWT Auth & RBAC]
-        LeadRouter[/api/submit-lead]
-        FeedbackRouter[/api/analyze-feedback]
-        ChatRouter[/api/chat]
+        Auth["JWT Auth & RBAC"]
+        LeadRouter["/api/submit-lead"]
+        FeedbackRouter["/api/analyze-feedback"]
+        ChatRouter["/api/chat"]
     end
     
     subgraph External [Hugging Face Models]
@@ -95,19 +95,26 @@ graph TD
 
 The recommended deployment architecture is a **Split Architecture** to maximize Next.js edge caching while running the heavy Python API safely in a server environment.
 
-### 1. Deploy Backend to Render (or similar)
+### 1. Deploy Backend to Render
 1. Push your repository to GitHub.
 2. In Render, create a new **Web Service**.
-3. Set the Root Directory to `backend/`.
+3. Keep the Root Directory as `/` (root) because Render uses the root `requirements.txt`.
 4. Build Command: `pip install -r requirements.txt`
-5. Start Command: `gunicorn app:app` (Make sure to add `gunicorn` to your requirements.txt).
+5. Start Command: `gunicorn --chdir backend app:app` (This points Gunicorn to the backend folder).
 6. Copy the resulting backend URL (e.g., `https://insightgreek-api.onrender.com`).
 
 ### 2. Deploy Frontend to Vercel
 1. In Vercel, import your GitHub repository.
 2. Set the Root Directory to `frontend/`.
 3. The Build command and Output directory will be auto-detected by Vercel for Next.js.
-4. **CRITICAL**: Since you aren't using `.env` variables for proxying currently, you'll need to update `next.config.ts` in production to proxy to your Render URL instead of `127.0.0.1:5000`.
+4. Add an Environment Variable in Vercel:
+   - **Key**: `NEXT_PUBLIC_API_URL`
+   - **Value**: Your Render Backend URL (e.g., `https://insightgreek-api.onrender.com`)
+   *The `next.config.ts` uses this variable to proxy API requests in production.*
+
+### 3. CI/CD Pipeline
+- A GitHub Actions workflow (`pytest.yml`) is included in `.github/workflows/`.
+- Every push or pull request to the `main` branch automatically triggers backend tests (e.g., RBAC authorization validation) via `pytest`.
 
 ---
 
@@ -157,5 +164,5 @@ npm run dev
 ---
 
 ## 🌐 Status
-*The application is fully functional end-to-end locally, with real live HTTP connections to both the Gradio DistilBERT endpoint and HuggingFace inference APIs for Qwen2.5. Deployments to Vercel (frontend) and Render (backend) are pending.*
+*The application is fully functional end-to-end. Next.js is actively deployed to Vercel, and the Flask API is running on Render with automated GitHub Actions CI/CD enforcing code stability.*
 ```
