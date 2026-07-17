@@ -1,284 +1,161 @@
-# InsightGreek CRM
+# 📊 InsightGreek-Brain CRM
 
-**Enterprise CRM prototype with NLP-powered sentiment analysis, lead scoring, and role-based access control.**
+**An AI-Powered Enterprise CRM prototype featuring dynamic NLP-driven sentiment analysis, intelligent lead scoring, and role-based access control, built with Next.js and Flask.**
 
+[![Next.js](https://img.shields.io/badge/Next.js-14+-black?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4+-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-2.x-000000?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
 [![HuggingFace](https://img.shields.io/badge/HuggingFace-Inference_API-FFD21E?style=flat-square&logo=huggingface&logoColor=black)](https://huggingface.co/inference-api)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ---
 
-## Project Overview
+## 🚀 Project Overview
 
-InsightGreek is a full-stack CRM prototype designed around an API-first architecture. It combines a Flask REST backend with NLP-driven lead intelligence to surface actionable insights from customer interactions — without requiring a heavyweight monolithic ML runtime.
+**InsightGreek-Brain** is a full-stack, AI-first CRM designed to transform raw customer interactions into actionable insights. It couples a blazing-fast, modern Next.js frontend with a robust Python/Flask backend. 
 
-The system was originally built around a **locally fine-tuned DistilBERT model** (trained on domain-specific CRM interaction data), which achieved **85.4% classification accuracy** and outperformed rule-based industry baselines by **+17.4%** (vs. VADER and TextBlob). The current architecture has since migrated to a **Hugging Face Inference API-first approach**: the fine-tuned model is hosted on Hugging Face Spaces and consumed via HTTP, decoupling the ML runtime from the Flask application layer. This makes the backend significantly leaner — no `torch` or `transformers` installation required on the server — while preserving full model capability.
+Instead of relying on a monolithic, hardware-heavy local ML runtime, InsightGreek offloads its heavy lifting to the **Hugging Face Inference API**. This decoupled approach enables seamless consumption of advanced AI models (like fine-tuned `DistilBERT` for sentiment/lead scoring and `Qwen2.5-7B-Instruct` for the chatbot) directly via HTTP, making the application incredibly lightweight, easily deployable, and highly scalable.
 
-Access control is enforced via a **3-tier JWT authentication system** with role-based dashboards, backed by a **PostgreSQL** relational store for leads, contacts, and interaction history.
-
----
-
-## Key Features
-
-- **Sentiment Analysis** — Customer interaction text is classified via the fine-tuned DistilBERT model served through Hugging Face Inference API. Outperforms VADER/TextBlob by 17.4% on domain-specific CRM data.
-- **Lead Conversion Scoring** — `/predict` endpoint returns a conversion probability score for inbound leads based on structured feature inputs.
-- **Chatbot Intent Handling** — `/api/chat` processes natural language queries and routes them to the appropriate CRM action or response.
-- **3-Tier JWT Authentication** — Role separation across Admin, Manager, and Agent tiers. Each tier exposes a scoped dashboard and restricted API surface.
-- **API-First ML Architecture** — Hugging Face Inference API replaces the local PyTorch runtime. Removes heavy dependencies, enables deployment on minimal compute, and allows model versioning independently of the application layer.
-- **PostgreSQL Backend** — Relational schema for leads, users, roles, and interaction logs. Designed for extensibility.
+Access control is rigidly enforced via a **3-tier JWT authentication system** (Developer, Manager, and Salesperson tiers). Data is durably persisted using an extensible **SQLite/PostgreSQL** backend.
 
 ---
 
-## Architecture Overview
+## ✨ Key Features
 
+- 🎯 **AI Lead Scoring** — Automatically scores inbound leads with confidence percentages to identify high-value prospects instantly.
+- 💬 **Intelligent Chat Assistant (Fully Functional End-to-End)** — A persistent, floating AI Sales Coach chatbot built directly into the UI. It provides real-time pitch refinement, actionable next steps, and synthetic lead generation based on active user context, powered live by Qwen2.5.
+- 📝 **Grammar & Feedback Analysis** — Processes raw customer feedback text for actionable sentiment classification (Positive/Neutral/Negative) and offers one-click grammar correction via LLM.
+- 🎨 **Dynamic UI/UX** — Fully responsive frontend built with **Next.js App Router** and **Tailwind CSS**. Features smooth page transitions, glassmorphism components, interactive gradients, and real-time form validation.
+- 🔒 **Role-Based Access Control (RBAC)** — Three distinct tiers of access:
+  - **Salesperson**: Submit leads, analyze feedback, and use the AI coach.
+  - **Manager**: View aggregated analytics, lead performance across the team, and qualitative visualizations.
+  - **Developer**: Access system logs, API health, and model performance metrics.
+
+---
+
+## 🏗️ Architecture Overview
+
+```mermaid
+graph TD
+    Client[Next.js Client UI] <-->|JSON over HTTP| Flask[Flask REST API]
+    
+    subgraph Frontend [Next.js App Router]
+        SalesDashboard[Salesperson Dashboard]
+        ManagerDashboard[Manager Dashboard]
+        DevDashboard[Developer Dashboard]
+        ChatWidget[Floating AI Chatbot]
+    end
+    
+    subgraph Backend [Flask Server]
+        Auth[JWT Auth & RBAC]
+        LeadRouter[/api/submit-lead]
+        FeedbackRouter[/api/analyze-feedback]
+        ChatRouter[/api/chat]
+    end
+    
+    subgraph External [Hugging Face Models]
+        DistilBERT[DistilBERT Text Classification]
+        Qwen[Qwen2.5-7B-Instruct LLM]
+    end
+
+    Client --> Frontend
+    Frontend --> Auth
+    Auth --> LeadRouter & FeedbackRouter & ChatRouter
+    LeadRouter & FeedbackRouter --> DistilBERT
+    ChatRouter --> Qwen
+    
+    Backend <--> Database[(SQLite / PostgreSQL)]
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Client Layer                      │
-│        (Role-Based Dashboards / API Consumers)      │
-└──────────────────────┬──────────────────────────────┘
-                       │  JWT Auth (3-Tier)
-┌──────────────────────▼──────────────────────────────┐
-│               Flask REST API (server.py)             │
-│                                                     │
-│   /predict          /api/chat         /auth/*       │
-└────────┬─────────────────┬────────────────┬─────────┘
-         │                 │                │
-┌────────▼───────┐ ┌───────▼──────┐ ┌──────▼────────┐
-│  Lead Scoring  │ │ Intent Router│ │  JWT + RBAC   │
-│    Module      │ │   (NLP)      │ │   Handler     │
-└────────┬───────┘ └───────┬──────┘ └──────┬────────┘
-         │                 │                │
-         └────────┬────────┘                │
-┌────────────────▼──────────────┐  ┌────────▼────────┐
-│  Hugging Face Inference API   │  │   PostgreSQL    │
-│  (Fine-tuned DistilBERT)      │  │   Database      │
-│  85.4% acc | API-first deploy │  │  (Leads, Users) │
-└───────────────────────────────┘  └─────────────────┘
-```
 
 ---
 
-## Tech Stack
+## 💻 Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **API Framework** | Flask 2.x |
-| **NLP Model** | DistilBERT (fine-tuned, hosted on Hugging Face Spaces) |
-| **ML Inference** | Hugging Face Inference API (API-first, no local torch) |
-| **Lead Scoring** | Custom ML model via `/predict` |
-| **Authentication** | JWT (3-tier: Admin / Manager / Agent) |
-| **Database** | PostgreSQL 15 |
-| **Baseline Comparison** | VADER, TextBlob (+17.4% improvement) |
-| **Original Training** | PyTorch + HuggingFace `transformers` (local fine-tune) |
-| **Deployment** | Hugging Face Spaces, Flask server |
+### Frontend
+- **Framework**: Next.js (App Router, Turbopack)
+- **Styling**: Tailwind CSS, PostCSS
+- **State/Routing**: React Hooks, `useRouter`
+- **Animations**: Custom Keyframe CSS & Tailwind utility classes
+
+### Backend
+- **Framework**: Python / Flask 2.x
+- **Database**: SQLite (Dev) / PostgreSQL (Prod)
+- **Authentication**: JSON Web Tokens (JWT)
+- **Async Execution**: Python `threading` for background ML initialization
+
+### Machine Learning & AI
+- **LLM/Chatbot**: `Qwen/Qwen2.5-7B-Instruct`
+- **Lead/Sentiment Classification**: `Kaizen696/my_lead_model` (distilbert-base-uncased via Gradio Client)
+- **Inference**: Hugging Face Inference API / Gradio Client
 
 ---
 
-## Local Setup
+## 🚀 Deployment
 
-### Prerequisites
+The recommended deployment architecture is a **Split Architecture** to maximize Next.js edge caching while running the heavy Python API safely in a server environment.
 
-- Python 3.10+
-- PostgreSQL 15 running locally or via a connection string
-- A Hugging Face account with access to the hosted model endpoint
+### 1. Deploy Backend to Render (or similar)
+1. Push your repository to GitHub.
+2. In Render, create a new **Web Service**.
+3. Set the Root Directory to `backend/`.
+4. Build Command: `pip install -r requirements.txt`
+5. Start Command: `gunicorn app:app` (Make sure to add `gunicorn` to your requirements.txt).
+6. Copy the resulting backend URL (e.g., `https://insightgreek-api.onrender.com`).
 
-### 1. Clone and create virtual environment
+### 2. Deploy Frontend to Vercel
+1. In Vercel, import your GitHub repository.
+2. Set the Root Directory to `frontend/`.
+3. The Build command and Output directory will be auto-detected by Vercel for Next.js.
+4. **CRITICAL**: Since you aren't using `.env` variables for proxying currently, you'll need to update `next.config.ts` in production to proxy to your Render URL instead of `127.0.0.1:5000`.
+
+---
+
+## 🛠️ Local Development Setup
+
+### 1. Prerequisites
+- **Node.js** 18+ (for frontend)
+- **Python** 3.10+ (for backend)
+
+### 2. Backend Setup
 
 ```bash
-git clone https://github.com/kaizen105/insightsgreek.git
-cd insightsgreek
-
+cd backend
 python -m venv venv
 source venv/bin/activate          # Windows: venv\Scripts\activate
-```
-
-### 2. Install dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-> **Note:** No `torch` or `transformers` installation required. The ML inference layer calls the Hugging Face Inference API remotely.
+> **Note:** The backend automatically connects to Hugging Face APIs via `gradio_client` and `huggingface_hub`. No heavy local `torch` or `transformers` installations are required.
 
-### 3. Configure environment variables
-
-Create a `.env` file in the project root:
-
-```env
-# Hugging Face
-HF_API_TOKEN=hf_your_token_here
-HF_MODEL_ENDPOINT=https://api-inference.huggingface.co/models/your-model-id
-
-# PostgreSQL
-DATABASE_URL=postgresql://user:password@localhost:5432/insightgreek
-
-# JWT
-JWT_SECRET_KEY=your_secret_key_here
-JWT_EXPIRY_HOURS=8
-```
-
-### 4. Initialise the database
-
+Start the backend:
 ```bash
-flask db upgrade        # or: python init_db.py
+python app.py
 ```
+*The Flask server will start on `http://127.0.0.1:5000`.*
 
-### 5. Run the server
+### 3. Frontend Setup
 
+In a new terminal window:
 ```bash
-python server.py
+cd frontend
+npm install
+npm run dev
 ```
-
-Server starts at `http://localhost:5000`.
+*The Next.js server will start on `http://localhost:3000` and automatically proxy `/api/*` requests to the Flask backend on port 5000.*
 
 ---
 
-## API Endpoint Reference
+## 🔮 Future Roadmap
 
-### Authentication
-
-All protected endpoints require a JWT bearer token in the `Authorization` header:
-
-```
-Authorization: Bearer <your_jwt_token>
-```
+- [ ] **Real-time WebSockets**: Upgrade the AI Chatbot to support streaming token generation.
+- [x] **Advanced Data Visualization**: Add `Recharts` or `Chart.js` for Manager Dashboard analytics.
+- [ ] **Dark Mode Toggle**: Implement dynamic theme switching with Tailwind's `dark:` classes.
+- [ ] **OAuth2 Integration**: Add Google/GitHub SSO login.
+- [ ] **Batch Processing**: Introduce Celery/Redis for bulk lead file uploads (CSV).
 
 ---
 
-### `POST /auth/login`
-
-Authenticate a user and receive a JWT token.
-
-**Request**
-```json
-{
-  "email": "manager@insightgreek.com",
-  "password": "your_password"
-}
+## 🌐 Status
+*The application is fully functional end-to-end locally, with real live HTTP connections to both the Gradio DistilBERT endpoint and HuggingFace inference APIs for Qwen2.5. Deployments to Vercel (frontend) and Render (backend) are pending.*
 ```
-
-**Response**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "role": "manager",
-  "expires_in": 28800
-}
-```
-
----
-
-### `POST /predict`
-
-Score an inbound lead for conversion probability. Returns a score in `[0, 1]`.
-
-**Request**
-```json
-{
-  "lead_source": "organic_search",
-  "industry": "fintech",
-  "company_size": "51-200",
-  "interactions_count": 4,
-  "last_interaction_days": 3,
-  "email_open_rate": 0.68,
-  "sentiment_score": 0.81
-}
-```
-
-**Response**
-```json
-{
-  "lead_id": "lead_8a3f92",
-  "conversion_probability": 0.847,
-  "risk_tier": "high-value",
-  "recommended_action": "escalate_to_senior_rep"
-}
-```
-
----
-
-### `POST /api/chat`
-
-Submit a natural language message for intent classification and CRM routing. Powered by the fine-tuned DistilBERT model via Hugging Face Inference API.
-
-**Request**
-```json
-{
-  "session_id": "sess_4c7d12",
-  "user_id": "usr_019",
-  "message": "I'd like to upgrade our plan and talk to someone about enterprise pricing."
-}
-```
-
-**Response**
-```json
-{
-  "intent": "upgrade_inquiry",
-  "sentiment": "positive",
-  "sentiment_confidence": 0.923,
-  "crm_action": "create_opportunity",
-  "reply": "I've flagged this as an upgrade inquiry and notified your account manager. Expect a follow-up within 24 hours.",
-  "model_version": "distilbert-insightgreek-v2"
-}
-```
-
----
-
-### `GET /leads` *(Manager / Admin only)*
-
-Retrieve paginated leads with sentiment and scoring metadata.
-
-**Request**
-```
-GET /leads?page=1&limit=20&risk_tier=high-value
-Authorization: Bearer <token>
-```
-
-**Response**
-```json
-{
-  "page": 1,
-  "total": 142,
-  "leads": [
-    {
-      "lead_id": "lead_8a3f92",
-      "name": "Acme Corp",
-      "conversion_probability": 0.847,
-      "sentiment": "positive",
-      "risk_tier": "high-value",
-      "last_interaction": "2025-06-10T14:32:00Z"
-    }
-  ]
-}
-```
-
----
-
-## Model Notes
-
-The sentiment analysis model is a **DistilBERT** checkpoint fine-tuned on domain-specific CRM interaction data (customer emails, chat transcripts, support tickets). Training was performed locally using the HuggingFace `transformers` library and PyTorch before being pushed to Hugging Face Spaces.
-
-| Model | Accuracy | Notes |
-|---|---|---|
-| **DistilBERT (fine-tuned)** | **85.4%** | Domain-specific CRM training data |
-| VADER | ~68% | Rule-based, no fine-tuning |
-| TextBlob | ~68% | Rule-based, no fine-tuning |
-
-The current production path calls the hosted model via Hugging Face Inference API. This eliminates the `torch`/`transformers` dependency from the Flask server environment, reducing container size and cold-start latency for deployment on lightweight infrastructure.
-
----
-
-## Roadmap
-
-- [ ] Webhook support for real-time CRM event triggers
-- [ ] Model A/B testing via feature flags
-- [ ] Async task queue (Celery + Redis) for bulk lead scoring
-- [ ] OpenAPI / Swagger documentation auto-generation
-- [ ] Admin dashboard for model performance monitoring
-
----
-
-## Link
-https://insightscreek.onrender.com/

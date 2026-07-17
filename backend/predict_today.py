@@ -113,11 +113,30 @@ def predict_lead_standalone(text):
         else:
             sentiment_label = "Low"
 
+        # Generate Explainability (XAI) string
+        text_lower = text.lower()
+        reasons = []
+        if any(w in text_lower for w in ['budget', 'approved', 'ready', 'sign']):
+            reasons.append("strong buying signals")
+        if any(w in text_lower for w in ['frustrated', 'cancel', 'expensive', 'competitor']):
+            reasons.append("churn indicators or friction")
+        if any(w in text_lower for w in ['maybe', 'later', 'six months', 'looking around']):
+            reasons.append("low-intent timelines")
+        
+        blob = TextBlob(text)
+        if blob.sentiment.polarity > 0.5:
+            reasons.append("highly positive sentiment")
+        elif blob.sentiment.polarity < -0.3:
+            reasons.append("negative sentiment")
+
+        explanation = "Score influenced by " + ", ".join(reasons) if reasons else "Score based on baseline AI evaluation"
+
         return {
             'text': text,
             'probability': lead_score,
             'sentiment': sentiment_label,
-            'confidence': max(lead_score, 1 - lead_score) # Mock confidence
+            'confidence': max(lead_score, 1 - lead_score), # Mock confidence
+            'explanation': explanation
         }
     except Exception as e:
         print(f"Error in predict_lead_standalone: {str(e)}")
@@ -125,7 +144,8 @@ def predict_lead_standalone(text):
             'text': text,
             'probability': 0.5,
             'sentiment': 'Neutral',
-            'confidence': 0.5
+            'confidence': 0.5,
+            'explanation': 'Fallback rule applied due to inference error'
         }
 
 # --- Test Block ---

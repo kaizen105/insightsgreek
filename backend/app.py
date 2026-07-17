@@ -19,28 +19,35 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# --- HUGGING FACE SETUP (Mistral 7B) ---
+# --- HUGGING FACE SETUP (Mistral 7B / Qwen) ---
 from huggingface_hub import InferenceClient  # noqa: E402
 
-HF_TOKEN = os.environ.get("HF_TOKEN")
-chat_client = None
-
-# Using Mistral-7B-Instruct (Great for chat & logic, and FREE)
+# Using Qwen 2.5-7B-Instruct (Great for chat & logic, and FREE)
 MODEL_REPO = "Qwen/Qwen2.5-7B-Instruct"
 
-if HF_TOKEN:
-    try:
-        chat_client = InferenceClient(model=MODEL_REPO, token=HF_TOKEN)
-        # Quick test
-        chat_client.chat_completion(
-            messages=[{"role": "user", "content": "hi"}], max_tokens=5
-        )
-        print(f"\n✅ SUCCESS: Connected to Hugging Face ({MODEL_REPO})")
-    except Exception as e:
-        print(f"\n❌ ERROR: Could not connect to Hugging Face: {e}")
-        chat_client = None
-else:
-    print("\nℹ️ NOTICE: HF_TOKEN not set. Chatbot disabled.")
+print("🔌 Connecting to Hugging Face Chat Model...")
+try:
+    chat_client = InferenceClient(model=MODEL_REPO)
+    # Quick test
+    chat_client.chat_completion(
+        messages=[{"role": "user", "content": "hi"}], max_tokens=5
+    )
+    print(f"\n✅ SUCCESS: Connected to Hugging Face ({MODEL_REPO})")
+except Exception as e:
+    print(f"\n❌ ERROR during initial Hugging Face test: {e}")
+    # Do NOT set chat_client = None here, as it might just be a transient 429 rate limit
+
+# Move predict_today import here to avoid thread deadlock
+try:
+    from predict_today import (
+        load_model,
+        predict_probability as predict_func,
+        predict_lead_standalone as lead_standalone_model_func,
+        predict_lead_quality as lead_quality_func,
+    )
+    print("✅ Successfully imported predict_today")
+except Exception as e:
+    print(f"❌ Failed to import predict_today: {e}")
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
@@ -80,34 +87,30 @@ import threading  # noqa: E402
 # --- Initialize global ML variables ---
 zero_shot_pipeline = None
 predict_probability = None
+predict_lead_standalone = None
 predict_lead_quality = None
 ml_loading_complete = False
 
 
 def load_sentiment_model_async():
-    """Load ultra-lightweight DeBERTa-v3-xsmall in background thread"""
-    global zero_shot_pipeline, predict_probability, predict_lead_quality, ml_loading_complete
+    """Load ultra-lightweight classification model in background thread"""
+    global zero_shot_pipeline, predict_probability, predict_lead_standalone, predict_lead_quality, ml_loading_complete
 
-    print("\n⏳ Background: Loading ultra-lightweight classification model...")
+    print("\n⏳ Background: Loading classification model via predict_today...")
     try:
-        from predict_today import (
-            load_model,
-            predict_probability as predict_func,
-            predict_lead_quality as lead_quality_func,
-        )
-
-        print("✅ Background: Module imported")
-
-        ml_components = load_model()
-        if ml_components:
-            zero_shot_pipeline, _ = ml_components
-            predict_probability = predict_func
-            predict_lead_quality = lead_quality_func
-            print("✅ Background: Model loaded successfully")
-            logging.info("DeBERTa-v3-xsmall loaded in background")
+        if 'load_model' in globals():
+            ml_components = load_model()
+            if ml_components:
+                zero_shot_pipeline, _ = ml_components
+                predict_probability = predict_func
+                predict_lead_standalone = lead_standalone_model_func
+                predict_lead_quality = lead_quality_func
+                print("✅ Background: Model loaded successfully")
+                logging.info("Model loaded in background")
+            else:
+                print("⚠️  Background: Model returned None")
         else:
-            print("⚠️  Background: Model returned None")
-
+            print("⚠️  Background: load_model not found in globals")
     except Exception as e:
         print(f"⚠️  Background: Model load failed: {str(e)}")
         logging.error(f"Model loading failed: {str(e)}")
@@ -441,27 +444,25 @@ def register():
 @token_required
 @role_required("salesperson")
 def submit_lead(current_user):
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+        
     data = request.get_json()
     text = data.get("text")
 
-    if not text:
+    if not text or not str(text).strip():
         return jsonify({"error": "Lead text is required"}), 400
 
     lead_score = None
     lead_label = None
-    if zero_shot_pipeline and predict_lead_quality:
+    explanation = None
+    if zero_shot_pipeline and predict_lead_standalone:
         try:
-            print(f"\n🔍 DEBUG: Calling predict_lead_quality with text: {text[:100]}")
-            lead_score = predict_lead_quality(text)
-            print(f"✅ DEBUG: Got lead_score = {lead_score}")
-
-            # Thresholds based on zero-shot lead quality classification
-            if lead_score >= 0.7:
-                lead_label = "High"
-            elif lead_score >= 0.4:
-                lead_label = "Medium"
-            else:
-                lead_label = "Low"
+            print(f"\n🔍 DEBUG: Calling predict_lead_standalone with text: {text[:100]}")
+            result = predict_lead_standalone(text)
+            lead_score = result.get('probability', 0.5)
+            lead_label = result.get('sentiment', 'Medium')
+            explanation = result.get('explanation', 'Model generated baseline evaluation.')
             logging.info(f"Lead scored: {lead_score:.4f} -> {lead_label}")
         except Exception as e:
             print(f"❌ ML Prediction failed: {e}")
@@ -471,9 +472,10 @@ def submit_lead(current_user):
             logging.error(f"Lead prediction error: {str(e)}")
             lead_score = 0.0
             lead_label = "Error"
+            explanation = "Prediction service encountered an error."
     else:
         print(
-            f"⚠️  DEBUG: Model not loaded yet. zero_shot_pipeline={bool(zero_shot_pipeline)}, predict_lead_quality={bool(predict_lead_quality)}"
+            f"⚠️  DEBUG: Model not loaded yet."
         )
 
     new_entry = Feedback(
@@ -481,6 +483,7 @@ def submit_lead(current_user):
         text=text,
         lead_score=lead_score,
         lead_label=lead_label,
+        explanation=explanation,
         status="lead",
     )
 
@@ -498,7 +501,7 @@ def submit_lead(current_user):
         jsonify(
             {
                 "message": "Lead submitted",
-                "ml_result": {"score": lead_score, "label": lead_label},
+                "ml_result": {"score": lead_score, "label": lead_label, "explanation": explanation},
             }
         ),
         201,
@@ -509,10 +512,13 @@ def submit_lead(current_user):
 @token_required
 @role_required("salesperson")
 def analyze_feedback(current_user):
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+        
     data = request.get_json()
     text = data.get("text")
 
-    if not text:
+    if not text or not str(text).strip():
         return jsonify({"error": "Feedback text is required"}), 400
 
     # --- USING ZERO-SHOT PIPELINE (AI) ---
@@ -571,6 +577,9 @@ def chat(current_user):
     if not chat_client:
         return jsonify({"error": "Chatbot not configured (Check HF_TOKEN)"}), 503
 
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+
     data = request.get_json()
     msg = data.get("message", "")
     context = data.get("context", "")
@@ -623,7 +632,7 @@ def chat(current_user):
 @app.route("/api/validate-leads", methods=["POST"])
 @token_required
 def validate_leads(current_user):
-    if not zero_shot_pipeline or not predict_lead_quality:
+    if not predict_lead_quality:
         return jsonify({"error": "ML model unavailable"}), 503
 
     data = request.get_json()
@@ -640,7 +649,7 @@ def validate_leads(current_user):
         key_phrase = parts[0].strip() if len(parts) > 0 else lead.strip()
 
         try:
-            score = predict_lead_quality((zero_shot_pipeline, None), key_phrase)
+            score = predict_lead_quality(key_phrase)
             label = "High" if score >= 0.7 else "Medium" if score >= 0.4 else "Low"
             logging.info(f"Validated lead snippet scored: {score:.4f} -> {label}")
 
@@ -679,7 +688,7 @@ def validate_leads(current_user):
     )
 
 
-@app.route("/api/check-grammar", methods=["POST"])
+@app.route("/api/grammar-check", methods=["POST"])
 @token_required
 @role_required("salesperson")
 def check_grammar(current_user):
@@ -715,7 +724,7 @@ def check_grammar(current_user):
 
 @app.route("/api/predict-lead", methods=["POST"])
 @token_required
-def predict_lead_standalone(current_user):
+def api_predict_lead_standalone(current_user):
     data = request.get_json()
     text = data.get("text")
 
@@ -846,17 +855,48 @@ def get_dashboard(current_user):
     word_counts = Counter(w for w in words if w not in stop_words and len(w) > 2)
     wordcloud_data = [[word, count] for word, count in word_counts.most_common(50)]
 
-    trends_labels = []
-    trends_data = []
-    for i in range(6, -1, -1):
-        day = datetime.now(timezone.utc) - timedelta(days=i)
-        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = day_start + timedelta(days=1)
-        count = Feedback.query.filter(
-            Feedback.timestamp >= day_start, Feedback.timestamp < day_end
-        ).count()
-        trends_labels.append(day.strftime("%m/%d"))
-        trends_data.append(count)
+    func = db.func
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    
+    # Group leads by date
+    leads_by_day = db.session.query(
+        func.date(Feedback.timestamp).label('date'),
+        func.count(Feedback.id).label('count'),
+        func.avg(Feedback.lead_score).label('avg_score')
+    ).filter(
+        Feedback.status == 'lead',
+        Feedback.timestamp >= seven_days_ago
+    ).group_by(func.date(Feedback.timestamp)).all()
+    
+    # Group feedback by date
+    feedback_by_day = db.session.query(
+        func.date(Feedback.timestamp).label('date'),
+        func.count(Feedback.id).label('count'),
+        func.avg(Feedback.sentiment_score).label('avg_sentiment')
+    ).filter(
+        Feedback.status == 'feedback',
+        Feedback.timestamp >= seven_days_ago
+    ).group_by(func.date(Feedback.timestamp)).all()
+
+    # Format data for frontend (recharts)
+    trends = {}
+    
+    # Initialize 7 days with 0
+    for i in range(7, -1, -1):
+        day_str = (datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d')
+        trends[day_str] = {'date': day_str, 'leads': 0, 'avgLeadScore': 0, 'feedback': 0, 'avgSentiment': 0}
+
+    for row in leads_by_day:
+        date_str = str(row.date)
+        if date_str in trends:
+            trends[date_str]['leads'] = row.count
+            trends[date_str]['avgLeadScore'] = round(row.avg_score or 0, 2)
+
+    for row in feedback_by_day:
+        date_str = str(row.date)
+        if date_str in trends:
+            trends[date_str]['feedback'] = row.count
+            trends[date_str]['avgSentiment'] = round(row.avg_sentiment or 0, 2)
 
     recent = Feedback.query.order_by(Feedback.timestamp.desc()).limit(10).all()
 
@@ -879,7 +919,7 @@ def get_dashboard(current_user):
                     "negative": neg_count,
                 },
                 "wordcloud_data": wordcloud_data,
-                "trends": {"labels": trends_labels, "data": trends_data},
+                "trends": list(trends.values()),
                 "recent": [f.to_dict() for f in recent],
             }
         ),
@@ -1043,6 +1083,57 @@ def forbidden(error):
 
 
 print("\n🚀 Flask application initialized successfully!\n")
+
+@app.route("/api/analytics", methods=["GET"])
+@token_required
+@role_required("manager")
+def analytics(current_user):
+    func = db.func
+    
+    # Get last 7 days of data
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    
+    # Group leads by date
+    leads_by_day = db.session.query(
+        func.date(Feedback.timestamp).label('date'),
+        func.count(Feedback.id).label('count'),
+        func.avg(Feedback.lead_score).label('avg_score')
+    ).filter(
+        Feedback.status == 'lead',
+        Feedback.timestamp >= seven_days_ago
+    ).group_by(func.date(Feedback.timestamp)).all()
+    
+    # Group feedback by date
+    feedback_by_day = db.session.query(
+        func.date(Feedback.timestamp).label('date'),
+        func.count(Feedback.id).label('count'),
+        func.avg(Feedback.sentiment_score).label('avg_sentiment')
+    ).filter(
+        Feedback.status == 'feedback',
+        Feedback.timestamp >= seven_days_ago
+    ).group_by(func.date(Feedback.timestamp)).all()
+
+    # Format data for frontend (recharts)
+    trends = {}
+    
+    # Initialize 7 days with 0
+    for i in range(7, -1, -1):
+        day_str = (datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d')
+        trends[day_str] = {'date': day_str, 'leads': 0, 'avgLeadScore': 0, 'feedback': 0, 'avgSentiment': 0}
+
+    for row in leads_by_day:
+        date_str = str(row.date)
+        if date_str in trends:
+            trends[date_str]['leads'] = row.count
+            trends[date_str]['avgLeadScore'] = round(row.avg_score or 0, 2)
+
+    for row in feedback_by_day:
+        date_str = str(row.date)
+        if date_str in trends:
+            trends[date_str]['feedback'] = row.count
+            trends[date_str]['avgSentiment'] = round(row.avg_sentiment or 0, 2)
+
+    return jsonify({"trends": list(trends.values())}), 200
 
 if __name__ == "__main__":
     try:

@@ -52,6 +52,9 @@ class Feedback(db.Model):
     sentiment_score = db.Column(db.Float, nullable=True)      # For "Sentiment %"
     sentiment_label = db.Column(db.String(20), nullable=True) # For "Positive/Negative/Neutral"
     # ----------------------------------------
+    
+    # Explainable AI Reason
+    explanation = db.Column(db.String(255), nullable=True)
 
     def to_dict(self):
         return {
@@ -66,7 +69,8 @@ class Feedback(db.Model):
             'lead_score': self.lead_score,
             'lead_label': self.lead_label,
             'sentiment_score': self.sentiment_score,
-            'sentiment_label': self.sentiment_label
+            'sentiment_label': self.sentiment_label,
+            'explanation': self.explanation
         }
 class Product(db.Model):
     __tablename__ = 'products'
