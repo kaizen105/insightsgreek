@@ -27,7 +27,8 @@ MODEL_REPO = "Qwen/Qwen2.5-7B-Instruct"
 
 print("🔌 Connecting to Hugging Face Chat Model...")
 try:
-    chat_client = InferenceClient(model=MODEL_REPO)
+    hf_token = os.environ.get("HF_TOKEN")
+    chat_client = InferenceClient(model=MODEL_REPO, token=hf_token)
     # Quick test
     chat_client.chat_completion(
         messages=[{"role": "user", "content": "hi"}], max_tokens=5
