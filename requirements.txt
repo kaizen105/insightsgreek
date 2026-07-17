@@ -10,3 +10,4 @@ textblob
 huggingface_hub
 psycopg2-binary
 requests
+gradio-client
