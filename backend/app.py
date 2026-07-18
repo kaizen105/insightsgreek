@@ -97,7 +97,7 @@ def load_sentiment_model_async():
     """Load ultra-lightweight classification model in background thread"""
     global zero_shot_pipeline, predict_probability, predict_lead_standalone, predict_lead_quality, ml_loading_complete
 
-    print("\n⏳ Background: Loading classification model via predict_today...")
+    print("\n Background: Loading classification model via predict_today...")
     try:
         if 'load_model' in globals():
             ml_components = load_model()
@@ -669,7 +669,7 @@ def validate_leads(current_user):
     if not leads_text:
         return jsonify({"error": "No leads provided"}), 400
 
-    lead_matches = re.findall(r"[-•*]\s+(.+)", leads_text)
+    lead_matches = re.findall(r"[-*]\s+(.+)", leads_text)
     validated = []
 
     for lead in lead_matches:
@@ -709,7 +709,7 @@ def validate_leads(current_user):
             {
                 "validated_leads": validated,
                 "high_quality_count": len(high_quality),
-                "recommendation": f"Focus on {len(high_quality)} strong leads—rerun chat if needed for more.",
+                "recommendation": f"Focus on {len(high_quality)} strong leadsrerun chat if needed for more.",
             }
         ),
         200,
