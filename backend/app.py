@@ -630,8 +630,9 @@ def chat(current_user):
                 high_tier_leads = []
                 for lead in leads:
                     try:
-                        score, label = lead_quality_func(lead)
-                        if score >= 0.60: # High quality threshold
+                        score = lead_quality_func(lead)
+                        if score >= 0.65: # High quality threshold
+                            label = "High Value"
                             high_tier_leads.append(f"{lead} \n  *-> ML Validation: {label} ({score * 100:.0f}% win probability)*")
                     except Exception as e:
                         print(f"Failed to score lead: {e}")

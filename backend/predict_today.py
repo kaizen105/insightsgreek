@@ -48,21 +48,15 @@ def predict_lead_quality(text):
 
             if isinstance(result, dict):
                 label = result.get('label', 'Low')
-                score = result.get('score', 0.5)
+                score = result.get('lead_score', result.get('score', 0.5))
             elif isinstance(result, (list, tuple)) and len(result) > 0:
                 if isinstance(result[0], dict):
                     label = result[0].get('label', 'Low')
-                    score = result[0].get('score', 0.5)
+                    score = result[0].get('lead_score', result[0].get('score', 0.5))
             
-            print(f"☁️ Cloud Prediction: {label} ({score:.4f})")
+            print(f"☁️ Cloud Prediction: {label} (Lead Score: {score:.4f})")
             
-            # Normalize to 0-1 scale
-            if label == 'High':
-                return float(score)                 # 0.8 - 1.0
-            elif label == 'Medium':
-                return float(0.4 + (score * 0.3))   # 0.4 - 0.7
-            else: # Low
-                return float(score * 0.3)           # 0.0 - 0.3 (penalize)
+            return float(score)
                 
         except Exception as e:
             print(f"❌ Cloud Inference Failed: {e}")
@@ -94,8 +88,8 @@ def predict_probability(text):
 def predict_sentiment_label(text):
     """Returns string label for Lead Quality"""
     score = predict_lead_quality(text)
-    if score > 0.7: return "High Value"
-    elif score > 0.4: return "Medium Priority"
+    if score >= 0.65: return "High Value"
+    elif score >= 0.35: return "Medium Priority"
     else: return "Low Priority"
 
 def predict_lead_standalone(text):
@@ -105,10 +99,10 @@ def predict_lead_standalone(text):
     try:
         lead_score = predict_lead_quality(text)
         
-        # Determine Label based on score
-        if lead_score > 0.7:
+        # Determine Label based on the NEW thresholds (High > 0.65, Medium > 0.35)
+        if lead_score >= 0.65:
             sentiment_label = "High-Value"
-        elif lead_score > 0.4:
+        elif lead_score >= 0.35:
             sentiment_label = "Medium"
         else:
             sentiment_label = "Low"
