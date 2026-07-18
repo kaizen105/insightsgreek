@@ -91,6 +91,22 @@ graph TD
 
 ---
 
+## 📈 ML Model Performance
+
+Our V2 Domain-Adapted DistilBERT model has been rigorously benchmarked against industry standards on a hold-out test set of sales/CRM communications. By adapting the model via a second stage of fine-tuning on hand-written sales heuristics (negation, competitor retention, buying signals), it significantly outperforms generic out-of-the-box sentiment models:
+
+| Model | Accuracy | Lead/Intent Detection |
+|-------|----------|------------------------|
+| **InsightGreek Model (v2)** | **85.4%** | **Highly Accurate** |
+| Twitter-RoBERTa | 77.0% | Moderate |
+| VADER | 62.5% | Poor (Rule-based) |
+| DistilBERT (SST-2 Baseline) | 58.3% | Poor (Binary) |
+| TextBlob | 54.1% | Poor (Naive) |
+
+*Full analysis reports, confusion matrices, and interactive distribution visualizations are available in the `analysis/` directory.*
+
+---
+
 ## 🚀 Deployment
 
 The recommended deployment architecture is a **Split Architecture** to maximize Next.js edge caching while running the heavy Python API safely in a server environment.
