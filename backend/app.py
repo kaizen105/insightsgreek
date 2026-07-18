@@ -25,7 +25,7 @@ from huggingface_hub import InferenceClient  # noqa: E402
 # Using Qwen 2.5-7B-Instruct (Great for chat & logic, and FREE)
 MODEL_REPO = "Qwen/Qwen2.5-7B-Instruct"
 
-print("🔌 Connecting to Hugging Face Chat Model...")
+print(" Connecting to Hugging Face Chat Model...")
 try:
     hf_token = os.environ.get("HF_TOKEN")
     chat_client = InferenceClient(model=MODEL_REPO, token=hf_token)
@@ -33,9 +33,9 @@ try:
     chat_client.chat_completion(
         messages=[{"role": "user", "content": "hi"}], max_tokens=5
     )
-    print(f"\n✅ SUCCESS: Connected to Hugging Face ({MODEL_REPO})")
+    print(f"\n SUCCESS: Connected to Hugging Face ({MODEL_REPO})")
 except Exception as e:
-    print(f"\n❌ ERROR during initial Hugging Face test: {e}")
+    print(f"\n ERROR during initial Hugging Face test: {e}")
     # Do NOT set chat_client = None here, as it might just be a transient 429 rate limit
 
 # Move predict_today import here to avoid thread deadlock
@@ -46,9 +46,9 @@ try:
         predict_lead_standalone as lead_standalone_model_func,
         predict_lead_quality as lead_quality_func,
     )
-    print("✅ Successfully imported predict_today")
+    print(" Successfully imported predict_today")
 except Exception as e:
-    print(f"❌ Failed to import predict_today: {e}")
+    print(f" Failed to import predict_today: {e}")
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
@@ -81,7 +81,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 CORS(app)
 
-print("✅ Flask app initialized and ready to bind to port\n")
+print(" Flask app initialized and ready to bind to port\n")
 
 import threading  # noqa: E402
 
@@ -106,27 +106,27 @@ def load_sentiment_model_async():
                 predict_probability = predict_func
                 predict_lead_standalone = lead_standalone_model_func
                 predict_lead_quality = lead_quality_func
-                print("✅ Background: Model loaded successfully")
+                print(" Background: Model loaded successfully")
                 logging.info("Model loaded in background")
             else:
-                print("⚠️  Background: Model returned None")
+                print("  Background: Model returned None")
         else:
-            print("⚠️  Background: load_model not found in globals")
+            print("  Background: load_model not found in globals")
     except Exception as e:
-        print(f"⚠️  Background: Model load failed: {str(e)}")
+        print(f"  Background: Model load failed: {str(e)}")
         logging.error(f"Model loading failed: {str(e)}")
     finally:
         ml_loading_complete = True
-        print("✅ Background: Model loading complete\n")
+        print(" Background: Model loading complete\n")
 
 
 # Start loading model in background immediately (non-blocking)
 print("\n" + "=" * 60)
-print("🚀 Starting sentiment model load in background thread...")
+print(" Starting sentiment model load in background thread...")
 print("=" * 60)
 bert_thread = threading.Thread(target=load_sentiment_model_async, daemon=True)
 bert_thread.start()
-print("✅ Background thread started - app will start immediately\n")
+print(" Background thread started - app will start immediately\n")
 
 with app.app_context():
     try:
@@ -139,10 +139,10 @@ with app.app_context():
         db.session.rollback()
 
     db.create_all()
-    print("\n🌱 Checking database status...")
+    print("\n Checking database status...")
 
     if not User.query.first():
-        print("👤 No users found. Seeding default users...")
+        print(" No users found. Seeding default users...")
         dev = User(username="dev", role="dev")
         dev.set_password("dev123")
         mgr = User(username="manager", role="manager")
@@ -151,10 +151,10 @@ with app.app_context():
         sls.set_password("sales123")
         db.session.add_all([dev, mgr, sls])
         db.session.commit()
-        print("✅ Users seeded.")
+        print(" Users seeded.")
 
     if not Product.query.first():
-        print("📦 No products found. Seeding samples...")
+        print(" No products found. Seeding samples...")
         db.session.add_all(
             [
                 Product(
@@ -178,10 +178,10 @@ with app.app_context():
             ]
         )
         db.session.commit()
-        print("✅ Products seeded.")
+        print(" Products seeded.")
 
     if not Feedback.query.first():
-        print("📊 No feedback found. Seeding dashboard data...")
+        print(" No feedback found. Seeding dashboard data...")
         sales_user = User.query.filter_by(role="salesperson").first()
 
         if sales_user:
@@ -306,11 +306,11 @@ with app.app_context():
                     db.session.add(fb)
 
             db.session.commit()
-            print("✅ Dashboard data (40 entries) seeded!")
+            print(" Dashboard data (40 entries) seeded!")
         else:
-            print("❌ ERROR: 'salesperson' user not found. Cannot seed data.")
+            print(" ERROR: 'salesperson' user not found. Cannot seed data.")
 
-print("\n🚀 Flask application initialized successfully!\n")
+print("\n Flask application initialized successfully!\n")
 
 
 def token_required(f):
@@ -468,14 +468,14 @@ def submit_lead(current_user):
     explanation = None
     if zero_shot_pipeline and predict_lead_standalone:
         try:
-            print(f"\n🔍 DEBUG: Calling predict_lead_standalone with text: {text[:100]}")
+            print(f"\n DEBUG: Calling predict_lead_standalone with text: {text[:100]}")
             result = predict_lead_standalone(text)
             lead_score = result.get('probability', 0.5)
             lead_label = result.get('sentiment', 'Medium')
             explanation = result.get('explanation', 'Model generated baseline evaluation.')
             logging.info(f"Lead scored: {lead_score:.4f} -> {lead_label}")
         except Exception as e:
-            print(f"❌ ML Prediction failed: {e}")
+            print(f" ML Prediction failed: {e}")
             import traceback
 
             traceback.print_exc()
@@ -485,7 +485,7 @@ def submit_lead(current_user):
             explanation = "Prediction service encountered an error."
     else:
         print(
-            f"⚠️  DEBUG: Model not loaded yet."
+            f"  DEBUG: Model not loaded yet."
         )
 
     new_entry = Feedback(
@@ -769,7 +769,7 @@ def api_predict_lead_standalone(current_user):
             label = "Low"
         return jsonify({"score": score, "label": label}), 200
     except Exception as e:
-        print(f"❌ Prediction error: {str(e)}")
+        print(f" Prediction error: {str(e)}")
         return jsonify({"error": "Prediction failed. Please try again."}), 500
 
 
@@ -1084,7 +1084,7 @@ def health_check():
             "chatbot": "available" if chat_client else "unavailable",
         },
     }
-    print(f"✅ Health check requested: {status}")
+    print(f" Health check requested: {status}")
     return jsonify(status), 200
 
 
@@ -1104,7 +1104,7 @@ def forbidden(error):
     return jsonify({"error": "Access forbidden"}), 403
 
 
-print("\n🚀 Flask application initialized successfully!\n")
+print("\n Flask application initialized successfully!\n")
 
 @app.route("/api/analytics", methods=["GET"])
 @token_required
@@ -1160,18 +1160,18 @@ def analytics(current_user):
 if __name__ == "__main__":
     try:
         print("\n" + "=" * 60)
-        print("🚀 Starting Flask Application")
+        print(" Starting Flask Application")
         print("=" * 60)
 
         with app.app_context():
-            print("📍 Creating database tables...")
+            print(" Creating database tables...")
             db.create_all()
-            print("✅ Database ready")
+            print(" Database ready")
 
         port = int(os.environ.get("PORT", 5000))
         debug_mode = os.environ.get("FLASK_ENV") != "production"
 
-        print("\n📊 Service Status:")
+        print("\n Service Status:")
         print(f"   Environment: {'Production' if not debug_mode else 'Development'}")
         print(f"   Port: {port}")
         print(
@@ -1179,21 +1179,21 @@ if __name__ == "__main__":
         )
         # We use 'zero_shot_pipeline' as the flag now
         print(
-            f"   ML Model: {'✅ Loaded (Cloud)' if zero_shot_pipeline else '❌ Not Loaded (graceful degradation)'}"
+            f"   ML Model: {' Loaded (Cloud)' if zero_shot_pipeline else ' Not Loaded (graceful degradation)'}"
         )
         print(
-            f"   Chatbot: {'✅ Available' if chat_client else '❌ Unavailable (graceful degradation)'}"
+            f"   Chatbot: {' Available' if chat_client else ' Unavailable (graceful degradation)'}"
         )
         print("=" * 60 + "\n")
 
-        print("✅ READY TO ACCEPT CONNECTIONS")
-        print(f"📡 Listening on 0.0.0.0:{port}\n")
+        print(" READY TO ACCEPT CONNECTIONS")
+        print(f" Listening on 0.0.0.0:{port}\n")
 
         app.run(host="0.0.0.0", port=port, debug=debug_mode)
 
     except Exception as e:
         print("\n" + "=" * 60)
-        print("❌ FATAL ERROR - Application startup failed")
+        print(" FATAL ERROR - Application startup failed")
         print("=" * 60)
         print(f"Error Type: {type(e).__name__}")
         print(f"Error Message: {str(e)}")

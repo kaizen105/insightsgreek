@@ -17,13 +17,13 @@ def load_model():
     """
     global cloud_client
     try:
-        print(f"🔌 Connecting to Hugging Face Space: {HF_SPACE_URL}...")
+        print(f" Connecting to Hugging Face Space: {HF_SPACE_URL}...")
         # Connect without token (Public Space)
         cloud_client = Client(HF_SPACE_URL)
-        print("✅ Connected to Cloud Model successfully.")
+        print(" Connected to Cloud Model successfully.")
         return (True, True) # Return dummy tuple to satisfy Flask's expectation
     except Exception as e:
-        print(f"⚠️ Warning: Could not connect to HF Space. Using local fallback. Error: {e}")
+        print(f" Warning: Could not connect to HF Space. Using local fallback. Error: {e}")
         return None
 
 def predict_lead_quality(text):
@@ -54,13 +54,13 @@ def predict_lead_quality(text):
                     label = result[0].get('label', 'Low')
                     score = result[0].get('lead_score', result[0].get('score', 0.5))
             
-            print(f"☁️ Cloud Prediction: {label} (Lead Score: {score:.4f})")
+            print(f" Cloud Prediction: {label} (Lead Score: {score:.4f})")
             
             return float(score)
                 
         except Exception as e:
-            print(f"❌ Cloud Inference Failed: {e}")
-            print("🔄 Switching to Local Fallback...")
+            print(f" Cloud Inference Failed: {e}")
+            print(" Switching to Local Fallback...")
 
     # 2. Local Fallback (Heuristics)
     text_lower = text.lower()
@@ -101,7 +101,7 @@ def predict_lead_standalone(text):
         
         # Determine Label based on the NEW thresholds (High > 0.65, Medium > 0.35)
         if lead_score >= 0.65:
-            sentiment_label = "High-Value"
+            sentiment_label = "High"
         elif lead_score >= 0.35:
             sentiment_label = "Medium"
         else:
