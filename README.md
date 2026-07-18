@@ -2,6 +2,8 @@
 
 **An AI-Powered Enterprise CRM prototype featuring dynamic NLP-driven sentiment analysis, intelligent lead scoring, and role-based access control, built with Next.js and Flask.**
 
+### [🌐 Live Web App](https://insightsgreek.vercel.app/) | [🧠 Hugging Face Model Weights](https://huggingface.co/Kaizen696/my_lead_model) | [🚀 HF Gradio Space](https://huggingface.co/spaces/Kaizen696/my_lead_model)
+
 [![Next.js](https://img.shields.io/badge/Next.js-14+-black?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4+-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
