@@ -23,7 +23,7 @@ Access control is rigidly enforced via a **3-tier JWT authentication system** (D
 
 ## ✨ Key Features
 
-- 🎯 **AI Lead Scoring** — Automatically scores inbound leads with confidence percentages using a fine-tuned `DistilBERT` model to identify high-value prospects instantly.
+- 🎯 **AI Lead Scoring** — Automatically scores inbound leads with confidence percentages using a V2 domain-adapted 3-class `DistilBERT` model to accurately identify high-value prospects.
 - 💬 **Intelligent Chat Assistant** — A persistent, floating AI Sales Coach chatbot built directly into the UI. Powered by Qwen2.5, it converses naturally, provides pitch refinement, and natively generates synthetic leads which are instantly validated by the local ML model before being returned to the user.
 - 📝 **Grammar & Feedback Analysis** — Processes raw customer feedback text for actionable sentiment classification (Positive/Neutral/Negative) and offers one-click grammar correction via LLM.
 - 🎨 **Dynamic UI/UX** — Fully responsive frontend built with **Next.js App Router** and **Tailwind CSS**. Features smooth page transitions, glassmorphism components, interactive gradients, and real-time form validation.
@@ -86,7 +86,7 @@ graph TD
 
 ### Machine Learning & AI
 - **LLM/Chatbot**: `Qwen/Qwen2.5-7B-Instruct`
-- **Lead/Sentiment Classification**: `Kaizen696/my_lead_model` (distilbert-base-uncased via Gradio Client)
+- **Lead/Sentiment Classification**: `Kaizen696/my_lead_model` (V2 3-class domain-adapted DistilBERT model trained on Financial PhraseBank & Sales Data)
 - **Inference**: Hugging Face Inference API / Gradio Client
 
 ---
