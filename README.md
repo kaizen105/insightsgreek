@@ -201,17 +201,7 @@ npm run dev
 ```
 *The Next.js server will start on `http://localhost:3000` and automatically proxy `/api/*` requests to the Flask backend on port 5000.*
 
----
 
-## 🔮 Future Roadmap
-
-- [ ] **Real-time WebSockets**: Upgrade the AI Chatbot to support streaming token generation.
-- [x] **Advanced Data Visualization**: Add `Recharts` or `Chart.js` for Manager Dashboard analytics.
-- [ ] **Dark Mode Toggle**: Implement dynamic theme switching with Tailwind's `dark:` classes.
-- [ ] **OAuth2 Integration**: Add Google/GitHub SSO login.
-- [ ] **Batch Processing**: Introduce Celery/Redis for bulk lead file uploads (CSV).
-
----
 
 ## 🌐 Status
 *The application is fully functional end-to-end. Next.js is actively deployed to Vercel, and the Flask API is running on Render with automated GitHub Actions CI/CD enforcing code stability.*
