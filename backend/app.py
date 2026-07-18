@@ -627,20 +627,25 @@ def chat(current_user):
                 lead_text = block.group(1).strip()
                 leads = [l.strip() for l in lead_text.split('\n') if l.strip().startswith("-")]
                 
-                high_tier_leads = []
+                scored_leads = []
                 for lead in leads:
                     try:
                         score = lead_quality_func(lead)
-                        if score >= 0.65: # High quality threshold
+                        if score >= 0.65:
                             label = "High Value"
-                            high_tier_leads.append(f"{lead} \n  *-> ML Validation: {label} ({score * 100:.0f}% win probability)*")
+                        elif score >= 0.35:
+                            label = "Medium"
+                        else:
+                            label = "Low Priority"
+                            
+                        scored_leads.append(f"{lead} \n  *-> ML Validation: {label} ({score * 100:.0f}% win probability)*")
                     except Exception as e:
                         print(f"Failed to score lead: {e}")
                 
-                if not high_tier_leads:
-                    replacement = "\n*I generated some leads, but our internal ML model flagged them as low quality. Please ask me to generate again with more specific criteria.*"
+                if not scored_leads:
+                    replacement = "\n*I couldn't generate any valid leads. Please try again.*"
                 else:
-                    replacement = "\n**Here are the High-Tier leads validated by our ML model:**\n" + "\n\n".join(high_tier_leads)
+                    replacement = "\n**Here are the generated leads, instantly validated by our ML model:**\n" + "\n\n".join(scored_leads)
                 
                 reply = reply[:block.start()] + replacement + reply[block.end():]
 
