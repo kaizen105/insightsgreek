@@ -74,7 +74,7 @@ export default function Home() {
             {
               icon: "🎯",
               title: "AI Lead Scoring",
-              desc: "Automatically score leads with 96%+ accuracy using machine learning models trained on your data.",
+              desc: "Automatically score leads with 90% accuracy using machine learning models fine-tuned on sales data.",
               delay: "delay-100"
             },
             {
@@ -106,7 +106,7 @@ export default function Home() {
       <section className="relative z-10 py-20 px-6 bg-gradient-to-b from-transparent to-black/30 border-t border-white/5">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-8 text-center">
           <div>
-            <div className="text-5xl font-bold text-indigo-400 mb-2">96%</div>
+            <div className="text-5xl font-bold text-indigo-400 mb-2">90%</div>
             <div className="text-white/60 font-medium">Lead Accuracy</div>
           </div>
           <div>
