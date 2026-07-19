@@ -26,8 +26,8 @@ Access control is rigidly enforced via a **3-tier JWT authentication system** (D
 ## ✨ Key Features
 
 - 🎯 **AI Lead Scoring** — Automatically scores inbound leads with confidence percentages using a V2 domain-adapted 3-class `DistilBERT` model to accurately identify high-value prospects.
-- 💬 **Intelligent Chat Assistant** — A persistent, floating AI Sales Coach chatbot built directly into the UI. Powered by Qwen2.5, it converses naturally, provides pitch refinement, and natively generates synthetic leads which are instantly validated by the local ML model before being returned to the user.
-- 📝 **Grammar & Feedback Analysis** — Processes raw customer feedback text for actionable sentiment classification (Positive/Neutral/Negative) and offers one-click grammar correction via LLM.
+- 💬 **Intelligent Chat Assistant** — A persistent, floating AI Sales Coach chatbot built directly into the UI. Powered by Qwen2.5, it converses naturally, provides pitch refinement, and natively generates synthetic leads which are instantly validated by the cloud ML model before being returned to the user.
+- 📝 **Feedback Analysis** — Processes raw customer feedback text for actionable sentiment classification (Positive/Neutral/Negative).
 - 🎨 **Dynamic UI/UX** — Fully responsive frontend built with **Next.js App Router** and **Tailwind CSS**. Features smooth page transitions, glassmorphism components, interactive gradients, and real-time form validation.
 - 🔒 **Role-Based Access Control (RBAC)** — Three distinct tiers of access:
   - **Salesperson**: Submit leads, analyze feedback, and use the AI coach.
