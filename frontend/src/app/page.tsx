@@ -28,12 +28,16 @@ export default function Home() {
           <div className="flex items-center gap-6">
             <Link 
               href="/login" 
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-white/80 hover:text-white transition-colors font-medium"
             >
               Login
             </Link>
             <Link 
               href="/register" 
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-6 py-2.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium shadow-[0_4px_15px_rgba(102,126,234,0.3)] hover:shadow-[0_6px_20px_rgba(102,126,234,0.5)] transition-all hover:-translate-y-0.5"
             >
               Create Account
@@ -59,12 +63,16 @@ export default function Home() {
         <div className="flex flex-col sm:flex-row items-center gap-5 animate-fade-in-up delay-300">
           <Link 
             href="/register" 
+            target="_blank"
+            rel="noopener noreferrer"
             className="w-full sm:w-auto px-10 py-4 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold shadow-[0_10px_30px_rgba(102,126,234,0.4)] hover:shadow-[0_15px_40px_rgba(102,126,234,0.6)] transition-all hover:-translate-y-1"
           >
             Get Started Free
           </Link>
           <Link 
             href="/login" 
+            target="_blank"
+            rel="noopener noreferrer"
             className="w-full sm:w-auto px-10 py-4 rounded-full bg-transparent border-2 border-white/30 text-white font-semibold hover:bg-white/10 hover:border-white transition-all"
           >
             Sign In &rarr;
