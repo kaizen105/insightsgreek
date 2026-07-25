@@ -86,10 +86,10 @@ print(" Flask app initialized and ready to bind to port\n")
 import threading  # noqa: E402
 
 # --- Initialize global ML variables ---
-zero_shot_pipeline = None
-predict_probability = None
-predict_lead_standalone = None
-predict_lead_quality = None
+zero_shot_pipeline = True # Not actually used for validation anymore, just for fallback tracking
+predict_probability = predict_func
+predict_lead_standalone = lead_standalone_model_func
+predict_lead_quality = lead_quality_func
 ml_loading_complete = False
 
 
@@ -466,7 +466,7 @@ def submit_lead(current_user):
     lead_score = None
     lead_label = None
     explanation = None
-    if zero_shot_pipeline and predict_lead_standalone:
+    if predict_lead_standalone:
         try:
             print(f"\n DEBUG: Calling predict_lead_standalone with text: {text[:100]}")
             result = predict_lead_standalone(text)
@@ -485,7 +485,7 @@ def submit_lead(current_user):
             explanation = "Prediction service encountered an error."
     else:
         print(
-            f"  DEBUG: Model not loaded yet."
+            f"  DEBUG: predict_lead_standalone function not imported properly."
         )
 
     new_entry = Feedback(

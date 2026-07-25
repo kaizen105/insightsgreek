@@ -1,12 +1,17 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Home - InsightGreek-Brain",
-  description: "Transform customer interactions and leads into actionable insights with real-time AI lead scoring and analytics.",
-};
+// export const metadata: Metadata = {
+//   title: "Home - InsightGreek-Brain",
+//   description: "Transform customer interactions and leads into actionable insights with real-time AI lead scoring and analytics.",
+// };
 
 export default function Home() {
+  const [showDemo, setShowDemo] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#0f0f23] text-white selection:bg-indigo-500/30 overflow-hidden relative">
       {/* Background elements */}
@@ -124,6 +129,37 @@ export default function Home() {
       <footer className="relative z-10 py-8 text-center text-white/40 text-sm border-t border-white/10">
         <p>&copy; {new Date().getFullYear()} Sales Feedback Intelligence. Built with AI & ❤️</p>
       </footer>
+
+      {/* Demo Credentials Helper */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        {showDemo && (
+          <div className="mb-4 bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-2xl shadow-2xl text-sm w-72 animate-slide-up-fade">
+            <h4 className="font-bold text-white mb-3 flex items-center gap-2">
+              <span>🔑</span> Demo Credentials
+            </h4>
+            <div className="space-y-3">
+              <div className="bg-black/30 p-2.5 rounded-lg border border-white/5">
+                <div className="text-indigo-300 font-semibold mb-1">Salesperson</div>
+                <div className="text-white/80 font-mono text-xs">U: sales<br/>P: sales123</div>
+              </div>
+              <div className="bg-black/30 p-2.5 rounded-lg border border-white/5">
+                <div className="text-purple-300 font-semibold mb-1">Manager</div>
+                <div className="text-white/80 font-mono text-xs">U: manager<br/>P: manager123</div>
+              </div>
+              <div className="bg-black/30 p-2.5 rounded-lg border border-white/5">
+                <div className="text-rose-300 font-semibold mb-1">Developer</div>
+                <div className="text-white/80 font-mono text-xs">U: dev<br/>P: dev123</div>
+              </div>
+            </div>
+          </div>
+        )}
+        <button 
+          onClick={() => setShowDemo(!showDemo)}
+          className="w-14 h-14 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-indigo-500/30 transition-all hover:-translate-y-1 hover:scale-105 group"
+        >
+          <span className="text-2xl group-hover:rotate-12 transition-transform">🔑</span>
+        </button>
+      </div>
     </div>
   );
 }

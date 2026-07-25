@@ -34,6 +34,10 @@ def predict_lead_quality(text):
         return 0.5
 
     # 1. Try Cloud Model (Your DistilBERT)
+    global cloud_client
+    if not cloud_client:
+        load_model()
+        
     if cloud_client:
         try:
             # API call
