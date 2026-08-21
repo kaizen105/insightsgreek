@@ -22,8 +22,8 @@ logging.basicConfig(
 # --- HUGGING FACE SETUP (Mistral 7B / Qwen) ---
 from huggingface_hub import InferenceClient  # noqa: E402
 
-# Using Qwen 2.5-7B-Instruct (Great for chat & logic, and FREE)
-MODEL_REPO = "Qwen/Qwen2.5-7B-Instruct"
+# Using Mistral-7B-Instruct-v0.3 (Highly stable for HF Serverless API)
+MODEL_REPO = "mistralai/Mistral-7B-Instruct-v0.3"
 
 print(" Connecting to Hugging Face Chat Model...")
 try:
@@ -69,13 +69,27 @@ app.config["SECRET_KEY"] = os.environ.get(
     "SECRET_KEY", "your-secret-key-change-this-in-production"
 )
 
+from sqlalchemy import create_engine
+
 database_url = os.environ.get("DATABASE_URL")
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///" + os.path.join(
-    CURRENT_DIR, "sales_feedback.db"
-)
+sqlite_url = "sqlite:///" + os.path.join(CURRENT_DIR, "sales_feedback.db")
+final_db_url = sqlite_url
+
+if database_url:
+    print(" Testing database connection...")
+    try:
+        engine = create_engine(database_url, pool_timeout=3)
+        with engine.connect() as conn:
+            print(" Successfully connected to PostgreSQL.")
+            final_db_url = database_url
+    except Exception as e:
+        print(f" Warning: PostgreSQL connection failed (database may be suspended). Falling back to SQLite. Error: {e}")
+        final_db_url = sqlite_url
+
+app.config["SQLALCHEMY_DATABASE_URI"] = final_db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
