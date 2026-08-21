@@ -1,0 +1,6 @@
+Model,Accuracy,Correct_Positive,Correct_Negative,Correct_Neutral
+Twitter-RoBERTa,0.56,61/100,36/100,71/100
+Your Model (v2),0.49666666666666665,34/100,68/100,47/100
+VADER,0.46,51/100,36/100,51/100
+DistilBERT (SST-2 baseline),0.3933333333333333,29/100,89/100,0/100
+TextBlob,0.39,39/100,18/100,60/100

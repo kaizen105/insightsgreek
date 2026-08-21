@@ -1,0 +1,7 @@
+id,text,score,predicted,expected,passed
+1,"Budget approved, ready to sign next week!",0.6660659909248352,Positive,Positive,True
+2,"Just browsing options, no immediate need.",0.8378711342811584,Positive,Negative,False
+3,Excited about the demo—let's schedule a call ASAP!,0.33061638474464417,Negative,Positive,False
+4,"Not interested at this time, thanks.",0.9480770826339722,Positive,Negative,False
+5,Our team is evaluating competitors right now.,0.023029951378703117,Negative,Negative,True
+6,"PO in progress, closing end of month—high priority!",0.3292887508869171,Negative,Positive,False

@@ -1,0 +1,7 @@
+id,text,prob_0,prob_1,pred_1,pass_1
+1,"Budget approved, ready to sign next week!",0.6660659909248352,0.33393406867980957,Negative,False
+2,"Just browsing options, no immediate need.",0.8378711342811584,0.16212886571884155,Negative,True
+3,Excited about the demo—let's schedule a call ASAP!,0.33061638474464417,0.6693835854530334,Positive,True
+4,"Not interested at this time, thanks.",0.9480770826339722,0.05192294716835022,Negative,True
+5,Our team is evaluating competitors right now.,0.023029951378703117,0.9769700765609741,Positive,False
+6,"PO in progress, closing end of month—high priority!",0.3292887508869171,0.6707112789154053,Positive,True

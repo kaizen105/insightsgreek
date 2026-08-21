@@ -1,0 +1,6 @@
+text,TextBlob_label,TextBlob_score,VADER_label,VADER_score,DistilBERT (SST-2 baseline)_label,DistilBERT (SST-2 baseline)_score,Twitter-RoBERTa_label,Twitter-RoBERTa_score,Your Model (v2)_label,Your Model (v2)_score
+Not interested at all. They are happy with their current vendor.,POSITIVE,0.225,POSITIVE,0.3489,POSITIVE,0.9995,NEGATIVE,-0.5832,POSITIVE,0.8365
+"Really impressed, asked for the contract right after the call.",POSITIVE,0.6429,POSITIVE,0.5256,POSITIVE,0.9994,POSITIVE,0.9757,POSITIVE,0.9635
+"Still weighing a few options, nothing decided yet.",NEGATIVE,-0.2,NEUTRAL,0.0,NEGATIVE,-0.9963,NEUTRAL,-0.8743,NEUTRAL,0.0
+"Budget is approved, excited to move forward.",POSITIVE,0.375,POSITIVE,0.6369,POSITIVE,0.9998,POSITIVE,0.9705,POSITIVE,0.9795
+"Too expensive, they went with a competitor.",NEGATIVE,-0.5,NEUTRAL,0.0,NEGATIVE,-0.9952,NEGATIVE,-0.7657,NEGATIVE,-0.956
