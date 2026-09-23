@@ -19,24 +19,29 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# --- HUGGING FACE SETUP (Mistral 7B / Qwen) ---
-from huggingface_hub import InferenceClient  # noqa: E402
+# --- OPENROUTER SETUP ---
+from openai import OpenAI
 
-# Using Qwen/Qwen2.5-7B-Instruct (Highly stable for HF Serverless API)
-MODEL_REPO = "Qwen/Qwen2.5-7B-Instruct"
+# Using qwen/qwen-2.5-7b-instruct:free (OpenRouter)
+MODEL_REPO = "qwen/qwen-2.5-7b-instruct:free"
 
-print(" Connecting to Hugging Face Chat Model...")
+print(" Connecting to OpenRouter Chat Model...")
+chat_client = None
 try:
-    hf_token = os.environ.get("HF_TOKEN")
-    chat_client = InferenceClient(model=MODEL_REPO, token=hf_token)
-    # Quick test
-    chat_client.chat_completion(
-        messages=[{"role": "user", "content": "hi"}], max_tokens=5
+    chat_client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ.get("OPENROUTER_API_KEY")
     )
-    print(f"\n SUCCESS: Connected to Hugging Face ({MODEL_REPO})")
+    # Quick test
+    chat_client.chat.completions.create(
+        model=MODEL_REPO,
+        messages=[{"role": "user", "content": "hi"}],
+        max_tokens=5
+    )
+    print(f"\n SUCCESS: Connected to OpenRouter ({MODEL_REPO})")
 except Exception as e:
-    print(f"\n ERROR during initial Hugging Face test: {e}")
-    # Do NOT set chat_client = None here, as it might just be a transient 429 rate limit
+    print(f"\n ERROR during initial OpenRouter test: {e}")
+    # Do NOT set chat_client = None here, as it might just be a transient rate limit
 
 # Move predict_today import here to avoid thread deadlock
 try:
@@ -599,7 +604,7 @@ def analyze_feedback(current_user):
 @token_required
 def chat(current_user):
     if not chat_client:
-        return jsonify({"error": "Chatbot not configured (Check HF_TOKEN)"}), 503
+        return jsonify({"error": "Chatbot not configured (Check OPENROUTER_API_KEY)"}), 503
 
     if not request.is_json:
         return jsonify({"error": "Request must be JSON"}), 400
@@ -624,7 +629,8 @@ def chat(current_user):
     """
 
     try:
-        completion = chat_client.chat_completion(
+        completion = chat_client.chat.completions.create(
+            model=MODEL_REPO,
             messages=[
                 {"role": "system", "content": system_role},
                 {"role": "user", "content": f"Context: {context}\n\nRequest: {msg}" if context else msg},
@@ -744,7 +750,8 @@ def check_grammar(current_user):
         return jsonify({"error": "AI not configured"}), 503
 
     try:
-        completion = chat_client.chat_completion(
+        completion = chat_client.chat.completions.create(
+            model=MODEL_REPO,
             messages=[
                 {
                     "role": "system",
