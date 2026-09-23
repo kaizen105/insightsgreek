@@ -17,7 +17,7 @@
 
 **InsightGreek-Brain** is a full-stack, AI-first CRM designed to transform raw customer interactions into actionable insights. It couples a blazing-fast, modern Next.js frontend with a robust Python/Flask backend. 
 
-Instead of relying on a monolithic, hardware-heavy local ML runtime, InsightGreek offloads its heavy lifting to the **Hugging Face Inference API**. This decoupled approach enables seamless consumption of advanced AI models (like fine-tuned `DistilBERT` for sentiment/lead scoring and `Qwen2.5-7B-Instruct` for the chatbot) directly via HTTP, making the application incredibly lightweight, easily deployable, and highly scalable.
+Instead of relying on a monolithic, hardware-heavy local ML runtime, InsightGreek offloads its heavy lifting to cloud APIs. This decoupled approach enables seamless consumption of advanced AI models (like fine-tuned `DistilBERT` for sentiment/lead scoring via Hugging Face and auto-routed advanced LLMs via OpenRouter for the chatbot) directly via HTTP, making the application incredibly lightweight, easily deployable, and highly scalable.
 
 Access control is rigidly enforced via a **3-tier JWT authentication system** (Developer, Manager, and Salesperson tiers). Data is durably persisted using an extensible **SQLite/PostgreSQL** backend.
 
@@ -26,7 +26,7 @@ Access control is rigidly enforced via a **3-tier JWT authentication system** (D
 ## ✨ Key Features
 
 - 🎯 **AI Lead Scoring** — Automatically scores inbound leads with confidence percentages using a V2 domain-adapted 3-class `DistilBERT` model to accurately identify high-value prospects.
-- 💬 **Intelligent Chat Assistant** — A persistent, floating AI Sales Coach chatbot built directly into the UI. Powered by Qwen2.5, it converses naturally, provides pitch refinement, and natively generates synthetic leads which are instantly validated by the cloud ML model before being returned to the user.
+- 💬 **Intelligent Chat Assistant** — A persistent, floating AI Sales Coach chatbot built directly into the UI. Powered by OpenRouter's auto-routing to the best available free LLM, it converses naturally, provides pitch refinement, and natively generates synthetic leads which are instantly validated by the cloud ML model before being returned to the user.
 - 📝 **Feedback Analysis** — Processes raw customer feedback text for actionable sentiment classification (Positive/Neutral/Negative).
 - 🎨 **Dynamic UI/UX** — Fully responsive frontend built with **Next.js App Router** and **Tailwind CSS**. Features smooth page transitions, glassmorphism components, interactive gradients, and real-time form validation.
 - 🔒 **Role-Based Access Control (RBAC)** — Three distinct tiers of access:
@@ -72,14 +72,14 @@ graph TD
     
     subgraph External [Hugging Face Models]
         DistilBERT[DistilBERT Text Classification]
-        Qwen[Qwen2.5-7B-Instruct LLM]
+        OpenRouter[OpenRouter Auto-Routed LLMs]
     end
 
     Client --> Frontend
     Frontend --> Auth
     Auth --> LeadRouter & FeedbackRouter & ChatRouter
     LeadRouter & FeedbackRouter --> DistilBERT
-    ChatRouter --> Qwen
+    ChatRouter --> OpenRouter
     
     Backend <--> Database[(SQLite / PostgreSQL)]
 ```
@@ -101,9 +101,9 @@ graph TD
 - **Async Execution**: Python `threading` for background ML initialization
 
 ### Machine Learning & AI
-- **LLM/Chatbot**: `Qwen/Qwen2.5-7B-Instruct`
+- **LLM/Chatbot**: `OpenRouter` (Auto-routed to best available free model)
 - **Lead/Sentiment Classification**: `Kaizen696/my_lead_model` (V2 3-class domain-adapted DistilBERT model trained on Financial PhraseBank & Sales Data)
-- **Inference**: Hugging Face Inference API / Gradio Client
+- **Inference**: Hugging Face Inference API / OpenRouter API
 
 ---
 
