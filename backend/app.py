@@ -22,8 +22,8 @@ logging.basicConfig(
 # --- OPENROUTER SETUP ---
 from openai import OpenAI
 
-# Using meta-llama/llama-3.1-8b-instruct:free (OpenRouter)
-MODEL_REPO = "meta-llama/llama-3.1-8b-instruct:free"
+# Using openrouter/free (Auto-routes to the best available free model)
+MODEL_REPO = "openrouter/free"
 
 print(" Connecting to OpenRouter Chat Model...")
 chat_client = None
