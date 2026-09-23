@@ -22,8 +22,8 @@ logging.basicConfig(
 # --- HUGGING FACE SETUP (Mistral 7B / Qwen) ---
 from huggingface_hub import InferenceClient  # noqa: E402
 
-# Using Mistral-7B-Instruct-v0.3 (Highly stable for HF Serverless API)
-MODEL_REPO = "mistralai/Mistral-7B-Instruct-v0.3"
+# Using Qwen/Qwen2.5-7B-Instruct (Highly stable for HF Serverless API)
+MODEL_REPO = "Qwen/Qwen2.5-7B-Instruct"
 
 print(" Connecting to Hugging Face Chat Model...")
 try:
