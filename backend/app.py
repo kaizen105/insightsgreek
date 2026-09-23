@@ -22,8 +22,8 @@ logging.basicConfig(
 # --- OPENROUTER SETUP ---
 from openai import OpenAI
 
-# Using qwen/qwen-2.5-7b-instruct:free (OpenRouter)
-MODEL_REPO = "qwen/qwen-2.5-7b-instruct:free"
+# Using meta-llama/llama-3.1-8b-instruct:free (OpenRouter)
+MODEL_REPO = "meta-llama/llama-3.1-8b-instruct:free"
 
 print(" Connecting to OpenRouter Chat Model...")
 chat_client = None
