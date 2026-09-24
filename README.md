@@ -54,25 +54,25 @@ insightcreek-brain/
 
 ```mermaid
 graph TD
-    Client[Next.js Client UI] <-->|JSON over HTTP| Flask[Flask REST API]
+    Client["Next.js Client UI"] <-->|"JSON over HTTP"| Flask["Flask REST API"]
     
-    subgraph Frontend [Next.js App Router]
-        SalesDashboard[Salesperson Dashboard]
-        ManagerDashboard[Manager Dashboard]
-        DevDashboard[Developer Dashboard]
-        ChatWidget[Floating AI Chatbot]
+    subgraph Frontend ["Next.js App Router"]
+        SalesDashboard["Salesperson Dashboard"]
+        ManagerDashboard["Manager Dashboard"]
+        DevDashboard["Developer Dashboard"]
+        ChatWidget["Floating AI Chatbot"]
     end
     
-    subgraph Backend [Flask Server]
+    subgraph Backend ["Flask Server"]
         Auth["JWT Auth & RBAC"]
         LeadRouter["/api/submit-lead"]
         FeedbackRouter["/api/analyze-feedback"]
         ChatRouter["/api/chat"]
     end
     
-    subgraph External [Hugging Face Models]
-        DistilBERT[DistilBERT Text Classification]
-        OpenRouter[OpenRouter Auto-Routed LLMs]
+    subgraph External ["Cloud APIs"]
+        DistilBERT["DistilBERT Text Classification"]
+        OpenRouter["OpenRouter LLMs"]
     end
 
     Client --> Frontend
@@ -81,7 +81,7 @@ graph TD
     LeadRouter & FeedbackRouter --> DistilBERT
     ChatRouter --> OpenRouter
     
-    Backend <--> Database[(SQLite / PostgreSQL)]
+    Backend <--> Database[("SQLite / PostgreSQL")]
 ```
 
 ---
